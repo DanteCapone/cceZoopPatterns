@@ -13,28 +13,23 @@ here()
 
 
 ###18S
-# ,Read in the data
-# ,Run 1 (Non pooled data)
-asv18s_run1=read.csv(here("data","ASV_table_18s_run1.csv")) %>%
+#Read in the OTU data
+#Run 1 (Non pooled data)
+asv18s_run1=read.csv(here("data/past/","ASV_table_18s_run1.csv")) %>%
   select(-X) 
-# column_to_rownames("Hash")
-
-# ,Run2
-asv18s_run2=read.csv(here("data","ASV_table_18s_run2.csv")) %>%
+#Run2
+asv18s_run2=read.csv(here("data/past/","ASV_table_18s_run2.csv")) %>%
   select(-X)
-# column_to_rownames("Hash")
 
 
 
-# ,Taxa Tables 
-taxa_18s=read.csv(here("data/metazoopruned18s_tax.csv "))
-  # column_to_rownames("Hash")
-
+#Taxa Tables 
+taxa_18s=read.csv(here("data/past/metazoopruned18s_tax.csv "))
 
 # 2) Merging and manipulation (updated 8/24/2023 to create a new 18S input for fido where
 # I don't average technical replicates)
-# First need to average technical replicates
-# To do this i need to format long
+
+#Format Long
 run1_long=asv18s_run1 %>%
   pivot_longer(cols = 2:ncol(asv18s_run1), #Specify the columns to pivot
                names_to = "Sample_ID", #Name of the new variable column
@@ -154,7 +149,7 @@ fido_18s_s1_final <- fido_18s_s1_final[!(rownames(fido_18s_s1_final) %in% rows_n
 
 
 #Save
-write.csv(fido_18s_s1_final,"data/fido/fido_18s_s1_ecdf_spp_hash.csv")
+write.csv(fido_18s_s1_final,here("data/EDCF/18s/fido_18s_s1_ecdf_spp_hash.csv"))
 
 #Plot ECDF
 fido_18s_s1 %>%  ggplot(., aes(rowSums(.))) +

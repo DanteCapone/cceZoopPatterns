@@ -9,42 +9,46 @@ library(fido)
 library(stringr)
 library(here)
 library(gridExtra)
+here()
 
 
-fido_input_filt=read.csv(file.path("data/fido/fido_18s_s1_ecdf_spp_hash.csv"), header=TRUE, check.names = FALSE, row.names = 1)
+###Load in the ECDF-filtered data for the 18S primer using long format species and hash name so I ca identify taxa
+##First Size 1
+fido_input_filt=read.csv(here("data/EDCF/18s/fido_18s_s1_ecdf_spp_hash.csv"), header=TRUE, check.names = FALSE, row.names = 1)
   
   #Metadata
-  meta_18s=read.csv(file.path("data/fido","meta_18s_unaveraged_s1.csv"), header=TRUE) %>%
+  meta_18s=read.csv(file.path("data/fido/meta_18s_unaveraged_s1.csv"), header=TRUE) %>%
     select(-c(X)) %>%
     filter(Sample_name %in% colnames(fido_input_filt))
   colnames(fido_input_filt) <- gsub("^X", "", colnames(fido_input_filt))
   
-  ##MPN: Next, we need to make sure that the orders are the same between meta_18s and fido_input_filt
+  ##Next, we need to make sure that the orders are the same between meta_18s and fido_input_filt
   meta_18s <- meta_18s[match(colnames(fido_input_filt), meta_18s$Sample_name),]
   
   #Model matrix
-  ##MPN: To be clear, this will fit a linear model with an intercept for every sample (no global intercept because of the "-1") and a slope for cycle number
+  #This will fit a linear model with an intercept for every sample (no global intercept because of the "-1") and a slope for cycle number
   X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
-  
   Y_s1=fido_input_filt%>% as.matrix() 
   
-  ## MPN: Cleaning the names slightly to make it easier to read
+  ## Shortening hash portion of the name a bit to make more readable
   i <- 1:nrow(Y_s1)
   rownames(Y_s1) <- sub("NA", "", rownames(Y_s1))
   rownames(Y_s1) <- paste0("seq_", i, "_", rownames(Y_s1))
   rownames(Y_s1) <- sub("^(.*\\..*\\..{5}).*", "\\1",(rownames(Y_s1)))
   
+  
+  #Fit pibble model 
   fit <- pibble(Y_s1, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
   
-  # ,Convert to centered log ratio coordinates
+  #Convert to centered log ratio coordinates
   fit_s1 <- to_clr(fit)
 
-############
-###Proportions
+  #Convert to Proportions
+  fit_prop_1 <- to_proportions(fit_s1)
+  
+  
+  ############
 
-#Predict at cycle 0
-fit_prop_1 <- to_proportions(fit_s1)
-# predicted_s1 <- predict(fit_prop_1, newdata=X.tmp.s1, summary=TRUE) %>% 
 
 
 
@@ -58,17 +62,25 @@ X.tmp.s1 <- matrix(0, nrow(X), 1) #Create fake covariate data to predict the reg
 rownames(X.tmp.s1) <- rownames(X)
 
 
-#Samples to loop thru
+#Samples to loop thru-for each iteration of the loop I will set the one I want to predict on to '1' from '0'
 X.tmp.s1 %>% as.data.frame() %>% rownames_to_column("sample") %>%
   select("sample") %>%
   filter(!sample %in% c("sample_numCalibration","cycle_num"))%>% as.data.frame()->samples_to_loop 
 
+#Create a dataframe to fill with Cycle 0 proportions thru the loop
 final_data_s1 <- data.frame()
 
+
+#Here begins the loop
 for(s in samples_to_loop$sample){
+  #Print sample name as a sanity check
   print(s)
+  
+  #Set selected sample to 1
   X.tmp.s1[s,] <-1
   
+  
+  #
   predicted_s1 <- predict(fit_prop_1, newdata=X.tmp.s1, summary=TRUE) %>% 
     mutate(cycle_num = c(0)[sample])%>%
     mutate(size=rep("0.2-0.5mm"))%>%
@@ -105,23 +117,7 @@ for(s in samples_to_loop$sample){
     theme_classic()
   
 
-  
-  ###
-  # taxa_list=rownames(Y_s1)
-  # taxa_sel=taxa_list[1:10]
-  # focus.coord <- paste0("clr_", taxa_sel) 
-  # focus.covariate <- rownames(X.tmp.s1)[which(grepl("sample_num", rownames(X.tmp.s1)))]
-  # ##  
-  # predicted_s1 %>% filter(coord %in% focus.coord) %>% 
-  #   ggplot(aes(x=cycle_num)) +
-  #   geom_ribbon(aes(ymin=p2.5, ymax=p97.5), fill="darkgrey") +
-  #   geom_line(aes(y=mean)) +
-  #   geom_point(data=tidy_calibration %>% filter(coord %in% focus.coord), aes(y=val)) +
-  #   facet_grid(coord~.) +
-  #   theme_bw() +
-  #   theme(strip.text.y=element_text(angle=0)) +
-  #   ylab("CLR Coordinates") ##Again, would be to proportions, Not CLR coordinates :)
-  # 
+
   
   final_data_s1 <- bind_rows(final_data_s1, sample_temp_sel)
   
@@ -130,31 +126,32 @@ for(s in samples_to_loop$sample){
   
 }
 
-
+#BEEP to notify when finished lol
 beepr::beep(12)
 
-write.csv(final_data_s1,here("data/predicted_og/predicted_og_18s_11_3_2023_s1.csv"))
+#Save final data
+current_date <- format(Sys.Date(), "%m_%d_%Y")
+write.csv(final_data_s1,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s1.csv")))
 
 
 ##Barplots of predicted C0 proportions
-# taxa_list=predicted_s1 %>%
-#   arrange(desc(n_reads)) %>%
-#   select(coord)
-# taxa_sel=taxa_list[1:10,]
-# focus.coord <- taxa_sel
-# 
-# predicted_s1 %>% filter(coord %in% focus.coord) %>%
-#   ggplot(., aes(fill=coord, y=mean, x=as.factor(cycle_num))) + 
-#   geom_bar(position="stack", stat="identity", width=0.5)+
-#   scale_fill_discrete(name="ASV")+
-#   labs(x="PCR Cycle Number",y="Relative Abundance")+
-#   facet_wrap(~size, nrow=3)+
-#   theme_classic()
+taxa_list=final_data_s1 %>%
+  arrange(desc(n_reads)) %>%
+  select(coord) %>% unique()
+taxa_sel=taxa_list[1:10,]
+focus.coord <- taxa_sel
+
+final_data_s1 %>% filter(coord %in% focus.coord) %>%
+  ggplot(., aes(fill=coord, y=n_reads, x=as.factor(cycle_num))) +
+  geom_bar(position="stack", stat="identity", width=0.5)+
+  scale_fill_discrete(name="ASV")+
+  labs(x="PCR Cycle Number",y="Relative Abundance")+
+  theme_classic()
+## It appears that 'other' is highly over-represented
 
 
-
-### Maps for OG proportions
-#Metadata
+### Maps for Cycle 0 proportions
+#Load complete environmental Metadata file
 metazoo_meta=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv"))%>% 
   dplyr::select(-c("X")) %>%
   column_to_rownames("Sample_ID_dot")
@@ -206,11 +203,11 @@ p1
 
 
 
-###############
-############### Let's repeat for other sizes now
+
+############### Let's repeat for other sizes now ###############
 
 ############First 0.5-1############
-fido_input_filt=read.csv(file.path("data/fido/fido_18s_s2_ecdf_spp_hash.csv"), header=TRUE, check.names = FALSE, row.names = 1)
+fido_input_filt=read.csv(file.path("data/EDCF/18s/fido_18s_s2_ecdf_spp_hash.csv"), header=TRUE, check.names = FALSE, row.names = 1)
 
 #Metadata
 meta_18s=read.csv(file.path("data/fido","meta_18s_unaveraged_s2.csv"), header=TRUE) %>%
@@ -237,15 +234,12 @@ fit <- pibble(Y_s2, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 # ,Convert to centered log ratio coordinates
 fit_s2 <- to_clr(fit)
+###Proportions
+fit_prop_2 <- to_proportions(fit_s2)
+
 
 ############
-###Proportions
-
 #Predict at cycle 0
-fit_prop_2 <- to_proportions(fit_s2)
-# predicted_s2 <- predict(fit_prop_1, newdata=X.tmp.s2, summary=TRUE) %>% 
-
-
 X.tmp.s2 <- matrix(0, nrow(X), 1) #Create fake covariate data to predict the regression line based on 
 rownames(X.tmp.s2) <- rownames(X)
 
@@ -306,7 +300,9 @@ for(s in samples_to_loop$sample){
 
 beepr::beep(4)
 
-write.csv(final_data_s2,here("data/predicted_og/predicted_og_18s_11_3_2023_s2.csv"))
+current_date <- format(Sys.Date(), "%m_%d_%Y")
+write.csv(final_data_s2,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s2.csv")))
+
 
 ### Maps for OG proportions
 
@@ -344,9 +340,9 @@ p2
 
 
 
-#########
+######### Final size
 ##### 1-2mm####
-fido_input_filt=read.csv(file.path("data/fido/fido_18s_s3_ecdf_spp_hash.csv"), header=TRUE, check.names = FALSE, row.names = 1)
+fido_input_filt=read.csv(file.path("data/EDCF/18s/fido_18s_s3_ecdf_spp_hash.csv"), header=TRUE, check.names = FALSE, row.names = 1)
 
 #Metadata
 meta_18s=read.csv(file.path("data/fido","meta_18s_unaveraged_s3.csv"), header=TRUE) %>%
@@ -373,20 +369,12 @@ fit <- pibble(Y_s3, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 # ,Convert to centered log ratio coordinates
 fit_s3 <- to_clr(fit)
-# plot(fit_s3, par="Lambda", focus.cov="cycle_num")
-X.tmp.s3 <- matrix(0, nrow(X), 1) #Create fake covariate data to predict the regression line based on 
-rownames(X.tmp.s3) <- rownames(X)
 
-
-###Proportions
-
-#Predict at cycle 0
+##Proportions
 fit_prop_3 <- to_proportions(fit_s3)
-# predicted_s3 <- predict(fit_prop_1, newdata=X.tmp.s3, summary=TRUE) %>% 
 
-
-
-
+#
+####Predict at cycle 0
 #Make X.tmp for loop
 X.tmp.s3 <- matrix(0, nrow(X), 1) #Create fake covariate data to predict the regression line based on 
 rownames(X.tmp.s3) <- rownames(X)
@@ -448,16 +436,16 @@ for(s in samples_to_loop$sample){
 }
 
 
-beepr::beep(12)
+beepr::beep(7)
 
-write.csv(final_data_s3,here("data/predicted_og/predicted_og_18s_11_3_2023_s3.csv"))
-
+current_date <- format(Sys.Date(), "%m_%d_%Y")
+write.csv(final_data_s3,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s1.csv")))
 
 ### Maps for OG proportions
 #Now make a dataframe for mapping and add lat/long
 
-final_data_s3=read.csv(here("data/predicted_og/predicted_og_18s_11_3_2023_s3.csv")) %>%
-  select(-X.1,X)
+# final_data_s3=read.csv(here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s1.csv"))) %>%
+#   select(-X)
 
 
 map_pcr_18s_s3=final_data_s3 %>% filter(cycle_num==0)%>%
