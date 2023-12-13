@@ -38,7 +38,23 @@ fido_input_filt=read.csv(here("data/EDCF/18s/fido_18s_s1_ecdf_spp_hash.csv"), he
   
   
   #Fit pibble model 
-  fit <- pibble(Y_s1, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
+  ##MPN: Please remind me how did you choose the 20? Was it using the log marginal likelihood? If so, that code should probably be included here. Happy to chat about this more.
+  ##MPN: This is assuming the default priors for Theta, upsilon, and Xi. Probably reasonable here, but, may want to look in prior predictive checks
+  ##Basically, would run this. These first few rows are just setting the defaults (which fido auto does in the line you have)
+  upsilon <- nrow(Y_s1)+3 
+  Omega <- diag(nrow(Y_s1))
+  G <- cbind(diag(nrow(Y_s1)-1), -1)
+  Xi <- (upsilon-nrow(Y_s1))*G%*%Omega%*%t(G)
+  Theta <- matrix(0, nrow(Y_s1)-1, nrow(X))
+  priors <- pibble(NULL, X, Gamma = 20*diag(nrow(X)), upsilon = upsilon, Theta = Theta, Xi = Xi, n_samples = 10000)
+  print(priors)
+  priors <- to_clr(priors)
+  summary(priors, pars="Lambda", gather_prob=TRUE, as_factor=TRUE, use_names=TRUE)  
+  ##Looks ok, centered at zero
+  ##end of added code
+  
+  ##MPN: Note, you had lower case "gamma" the parameter is upper case "Gamma". Fido was using the default here instead of what you supplied.
+  fit <- pibble(Y_s1, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
   
   #Convert to centered log ratio coordinates
   fit_s1 <- to_clr(fit)
@@ -107,7 +123,7 @@ for(s in samples_to_loop$sample){
   taxa_list=unique(sample_temp_sel$coord)
   taxa_sel=taxa_list[1:3]
   
-  
+  ##MPN: NOt exactly sure what you are trying to show with this plot
   sample_temp_sel%>% 
     filter(coord %in% taxa_sel) %>% 
     ggplot(.,aes(x=cycle_num,y=n_reads, fill=coord))+
@@ -141,6 +157,7 @@ taxa_list=final_data_s1 %>%
 taxa_sel=taxa_list[1:10,]
 focus.coord <- taxa_sel
 
+##MPN: Are you aggregating over the samples
 final_data_s1 %>% filter(coord %in% focus.coord) %>%
   ggplot(., aes(fill=coord, y=n_reads, x=as.factor(cycle_num))) +
   geom_bar(position="stack", stat="identity", width=0.5)+
@@ -201,7 +218,7 @@ p1
 
 
 
-
+##MPN: Did not look past this because I assumed it was the same and all the comments above would apply. Let me know if that's now the case.
 
 
 ############### Let's repeat for other sizes now ###############

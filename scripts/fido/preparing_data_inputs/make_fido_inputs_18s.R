@@ -50,6 +50,12 @@ all_runs=bind_rows(run1_long,run2_long) %>%
   #Add taxa hash
   left_join(taxa_18s, by="Hash")%>%
   #Fill in if spp is missing
+  
+  ## MPN: I would check that this has the behavior you want it to
+  ## MPN: It seems like what you want is:
+  ## If order is missing, replace w class.
+  ## If family is missing, replace order, etc.
+  ## However, you are mutating Family alone leading to some things not being filled in 
   mutate(Family = if_else(is.na(Order), Class, Order)) %>%
   mutate(Family = if_else(Order=="", Class, Order)) %>%
   
@@ -66,13 +72,14 @@ all_runs=bind_rows(run1_long,run2_long) %>%
   dplyr::select(-Phylum,-Class,-Family,-Genus,-Order) %>%
   mutate(spp_hash=paste0(Species,".",Hash)) %>%
   # mutate(order_hash=paste(Order,Hash)) %>%
+  ## MPN: What's the point of all the stuff above if you are using the original Hash and not the new one you are making?
   column_to_rownames("Hash") %>%
   select(-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-spp_hash) 
 
+##MPN: Another common method is to amalgamate to the genus level and add anything that doesn't fit to an "other" category. This is very common in microbiome.
 
 #Replace X
 colnames(all_runs) <- gsub("^X", "", colnames(all_runs))
-
 
 
 #Separate out by size
@@ -87,7 +94,7 @@ fido_18s_s3=all_runs%>%
   dplyr::select(c(contains("All"),contains("S3"))) %>% 
   filter(rowSums(.) != 0)
 
-
+##MPN: Why not just use phyloseq?
 #Set ECDF threshold
 thresh_val=0.9
 
@@ -97,12 +104,21 @@ thresh_val=0.9
 
 #90% threshold
 #S1
+
+## MPN: Do you want to agglomerate the taxa at say the genus level? If so, should do before filtering.
+##MPN: to use the ecdf method, we want to look at the plot. Is this where you came up with the 90% threshold?
+##MPN: also might want to 
+fido_18s_s1[,-c(1:10)] %>% rowSums() %>% ecdf() %>% plot() %>% abline(v=1637)
+###end of added code
+
 fido_18s_s1=fido_18s_s1 %>% mutate(rowsum = rowSums(.[, 10:ncol(.)]))
 threshold <- quantile(fido_18s_s1$rowsum, thresh_val)
 
 # Separate rows based on threshold
+##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
 above_threshold <- fido_18s_s1 %>% filter(rowsum > threshold & !apply(.[, 1:9] == 0, 1, any))
 below_threshold_sum <- fido_18s_s1 %>% 
+  ##MPN: are you throwing out otus that don't appear in the pooled samples?
   filter(rowsum > threshold & !apply(.[, 1:9] == 0, 1, any)) %>%
   summarise_all(sum) %>% 
   mutate(rowname = "other") %>%
@@ -113,6 +129,7 @@ below_threshold_sum <- fido_18s_s1 %>%
 fido_18s_s1_final <- bind_rows(above_threshold, below_threshold_sum)
 
 #Remove mismatched rows and merge
+##MPN: are the counts of any of these large? Why are they missing?
 rows_not_in_taxa_18s <- rownames(fido_18s_s1_final)[!rownames(fido_18s_s1_final) %in% taxa_18s$Hash]
 
 for(row in rows_not_in_taxa_18s) {
@@ -130,7 +147,7 @@ fido_18s_s1_final <- fido_18s_s1_final[!(rownames(fido_18s_s1_final) %in% rows_n
   #Fill in if spp is missing
   mutate(Family = if_else(is.na(Order), Class, Order)) %>%
   mutate(Family = if_else(Order=="", Class, Order)) %>%
-  
+  ##MPN: same comment as before, any reason these are all "family"?
   
   mutate(Family = if_else(is.na(Family), Order, Family)) %>%
   mutate(Family = if_else(Family=="", Order, Family)) %>%
@@ -160,7 +177,7 @@ fido_18s_s1 %>%  ggplot(., aes(rowSums(.))) +
        y = "ECDF") +
   theme_minimal()
 
-
+##Assuming the code is the same as S1. Same comments apply :)
 ###S2
 #s2
 fido_18s_s2=fido_18s_s2 %>% mutate(rowsum = rowSums(.[, 10:ncol(.)]))
@@ -275,6 +292,7 @@ fido_18s_s3_final <- fido_18s_s3_final[!(rownames(fido_18s_s3_final) %in% rows_n
 write.csv(fido_18s_s3_final,"data/fido/fido_18s_s3_ecdf_spp_hash.csv")
 
 
+##MPN: Did not look past here. Please let me know if you want me to.
 ########### PREVIOUS Threshold approach
 #Threshold criteria (using >1 count in 30% of the samples)
 fido_18s_s1_filt=fido_18s_s1%>%
