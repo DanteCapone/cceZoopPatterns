@@ -1,3 +1,7 @@
+#Script to loop through different environmental variables and compare against taxa from quantitative analysis
+
+
+
 library(MicrobeDS)
 library(phyloseq)
 library(tidyverse)
@@ -7,7 +11,7 @@ library(here)
 
 here()
 #coi read in different sizes
-otucoi1=read.csv(here("data/fido/fido_coi_s1_ecdf.csv"), row.names = 1)%>%
+otucoi1=read.csv(here("data/EDCF/coi/fido_coi_s1_ecdf.csv"), row.names = 1)%>%
   dplyr::select(where(~ !is.na(.[[1]])))%>% 
   select(starts_with("C"))%>%
   rownames_to_column("Hash") %>%
@@ -19,7 +23,7 @@ otucoi1=read.csv(here("data/fido/fido_coi_s1_ecdf.csv"), row.names = 1)%>%
   column_to_rownames("Hash") %>%
   otu_table(as.matrix(.), taxa_are_rows = TRUE)
 
-otucoi2=read.csv(here("data/fido/fido_coi_s2_ecdf.csv"), row.names = 1)%>%
+otucoi2=read.csv(here("data/EDCF/coi/fido_coi_s2_ecdf.csv"), row.names = 1)%>%
   dplyr::select(where(~ !is.na(.[[1]])))%>% 
   select(starts_with("C"))%>%
   rownames_to_column("Hash") %>%
@@ -31,7 +35,7 @@ otucoi2=read.csv(here("data/fido/fido_coi_s2_ecdf.csv"), row.names = 1)%>%
   column_to_rownames("Hash") %>%
   otu_table(as.matrix(.), taxa_are_rows = TRUE)
 
-otucoi3=read.csv(here("data/fido/fido_coi_s3_ecdf.csv"), row.names = 1)%>%
+otucoi3=read.csv(here("data/EDCF/coi/fido_coi_s3_ecdf.csv"), row.names = 1)%>%
   dplyr::select(where(~ !is.na(.[[1]])))%>% 
   select(starts_with("C"))%>%
   rownames_to_column("Hash") %>%
@@ -43,7 +47,7 @@ otucoi3=read.csv(here("data/fido/fido_coi_s3_ecdf.csv"), row.names = 1)%>%
   column_to_rownames("Hash") %>%
   otu_table(as.matrix(.), taxa_are_rows = TRUE)
 
-taxcoi=read.csv(here("data/metazooprunedcoi_tax.csv"),row.names = 1)%>% add_row()
+taxcoi=read.csv(here("data/past/metazooprunedcoi_tax.csv"),row.names = 1)%>% add_row()
 rownames(taxcoi)[nrow(taxcoi)] <- 'other'
 #Subset to match 
 taxcoi1 = taxcoi %>% filter(rownames(taxcoi) %in% rownames(otucoi1))
@@ -109,7 +113,8 @@ for (dat_name in names(data_list)) {
     priors$Y <- Y # remember pibblefit objects are just lists
     posterior <- refit(priors, optim_method="lbfgs", jitter = 1e-5)
  
-    tax <- tax_table(dat)[,c("","Family","Species")]
+    tax <- tax_table(dat)[,c("Family","Species")] %>% as.data.frame() %>%
+      rownames_to_column("Hash")%>% select(-1, everything())
     num <- 1:nrow(tax)
     tax <- unname(apply(tax, 1, paste, collapse="_"))
     tax <- paste(tax,num,sep="_")
@@ -140,13 +145,13 @@ for (dat_name in names(data_list)) {
     
     # Create the PDF filename string
     save_path="plots/model_vis/"
-    filename <- paste0(save_path,"S_", dat_name, "_", var, ".png")
+    # filename <- paste0(save_path,"S_", dat_name, "_", var, ".png")
     
     # For demonstration purposes, print the filename
     cat("Saving to:", filename, "\n")
   
     
-    png(filename, width = 1000, height = 600)
+    # png(filename, width = 1000, height = 600)
     
     # Your plotting code
     sizes=c("0.2-0.5 mm","0.5-1 mm", "1-2 mm")
