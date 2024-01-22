@@ -1,5 +1,5 @@
-# ,From these runs, we didn't get data from the 20C or various pools for COI runs, but it worked for 18s
-# ,try first with 18s
+# From these runs, we didn't get data from the 20C or various pools for COI runs, but it worked for 18s
+# try first with 18s
 
 library (tidyverse)
 library (here)
@@ -24,7 +24,8 @@ asv18s_run2=read.csv(here("data/past/","ASV_table_18s_run2.csv")) %>%
 
 
 #Taxa Tables 
-taxa_18s=read.csv(here("data/past/metazoopruned18s_tax.csv "))
+taxa_18s=read.csv(here("data/past/metazoopruned18s_tax.csv ")) %>%
+  column_to_rownames("Hash")
 
 # 2) Merging and manipulation (updated 8/24/2023 to create a new 18S input for fido where
 # I don't average technical replicates)
@@ -56,25 +57,23 @@ all_runs=bind_rows(run1_long,run2_long) %>%
   ## If order is missing, replace w class.
   ## If family is missing, replace order, etc.
   ## However, you are mutating Family alone leading to some things not being filled in 
-  mutate(Family = if_else(is.na(Order), Class, Order)) %>%
-  mutate(Family = if_else(Order=="", Class, Order)) %>%
+  mutate(Order = if_else(is.na(Order), Class, Order)) %>%
+  mutate(Order = if_else(Order=="", Class, Order)) %>%
   
   
   mutate(Family = if_else(is.na(Family), Order, Family)) %>%
   mutate(Family = if_else(Family=="", Order, Family)) %>%
   
-  mutate(Family = if_else(is.na(Genus),Family, Genus )) %>%
-  mutate(Family = if_else(Genus=="",Family, Genus )) %>%
+  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
+  mutate(Genus = if_else(Genus=="",Family, Genus )) %>%
   
   mutate(Species = if_else(is.na(Species), Genus, Species))%>%
-  mutate(Species = if_else(Species== "", Family, Species)) %>%
-  
-  dplyr::select(-Phylum,-Class,-Family,-Genus,-Order) %>%
+  mutate(Species = if_else(Species== "", Genus, Species)) %>%
   mutate(spp_hash=paste0(Species,".",Hash)) %>%
   # mutate(order_hash=paste(Order,Hash)) %>%
   ## MPN: What's the point of all the stuff above if you are using the original Hash and not the new one you are making?
   column_to_rownames("Hash") %>%
-  select(-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-spp_hash) 
+  select(-Phylum,-Class,-Family,-Genus,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-spp_hash) 
 
 ##MPN: Another common method is to amalgamate to the genus level and add anything that doesn't fit to an "other" category. This is very common in microbiome.
 
@@ -93,6 +92,57 @@ fido_18s_s2=all_runs%>%
 fido_18s_s3=all_runs%>%
   dplyr::select(c(contains("All"),contains("S3"))) %>% 
   filter(rowSums(.) != 0)
+
+
+
+###DC: 12/14/2023-Use phyloseq for filtering and agglomerating
+##Phyloseq filtering
+fido_18s_s1_otu=fido_18s_s1 %>% otu_table(taxa_are_rows = TRUE)
+
+#taxa table
+tax18s_s1 = taxa_18s %>% filter(rownames(taxa_18s) %in% rownames(fido_18s_s1_otu))
+tax18s_s1=  tax_table(as.matrix(tax18s_s1))
+
+
+meta18s=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
+  dplyr::select(-c("X")) %>%
+  column_to_rownames("Sample_ID_dot") %>%
+  select(-c(Sizefractionmm,offshore_onshore,clust_group,PC1,cycle, max_size)) %>%
+  sample_data(.)
+
+fido_18s_s1_phy=phyloseq(fido_18s_s1_otu,tax18s_s1)
+
+#Agglomerate at the genus level
+fido_18s_s1_genus=tax_glom(fido_18s_s1_phy, taxrank = "Genus") 
+
+
+
+# Function to filter taxa based on ECDF
+filter_taxa_ecdf <- function(physeq, quantile_threshold) {
+  # Extract abundance data
+  abundances <- otu_table(physeq)
+  
+  # Compute ECDF for each taxon
+  ecdf_values <- apply(abundances, 1, ecdf)
+  
+  # Identify taxa exceeding the quantile_threshold
+  taxa_to_keep <- rownames(abundances)[apply(ecdf_values, 1, function(x) x(quantile_threshold)) > 0]
+  
+  # Create a new phyloseq object with filtered taxa
+  physeq_filtered <- prune_taxa(taxa_to_keep, physeq)
+  
+  return(physeq_filtered)
+}
+
+# Set the quantile threshold (e.g., 0.95)
+quantile_threshold <- 0.95
+
+# Apply the filter function
+physeq_filtered <- filter_taxa_ecdf(fido_18s_s1_genus, quantile_threshold)
+
+
+
+
 
 ##MPN: Why not just use phyloseq?
 #Set ECDF threshold
@@ -145,24 +195,23 @@ fido_18s_s1_final <- fido_18s_s1_final[!(rownames(fido_18s_s1_final) %in% rows_n
   #Add taxa hash
   left_join(taxa_18s, by="Hash")%>%
   #Fill in if spp is missing
-  mutate(Family = if_else(is.na(Order), Class, Order)) %>%
-  mutate(Family = if_else(Order=="", Class, Order)) %>%
-  ##MPN: same comment as before, any reason these are all "family"?
+    mutate(Order = if_else(is.na(Order), Class, Order)) %>%
+  mutate(Order = if_else(Order=="", Class, Order)) %>%
+  
   
   mutate(Family = if_else(is.na(Family), Order, Family)) %>%
   mutate(Family = if_else(Family=="", Order, Family)) %>%
   
-  mutate(Family = if_else(is.na(Genus),Family, Genus )) %>%
-  mutate(Family = if_else(Genus=="",Family, Genus )) %>%
+  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
+  mutate(Genus = if_else(Genus=="",Family, Genus )) %>%
   
   mutate(Species = if_else(is.na(Species), Genus, Species))%>%
-  mutate(Species = if_else(Species== "", Family, Species)) %>%
-
-  mutate(spp_hash=paste0(Order,".",Species,".",Hash)) %>%
-  dplyr::select(-Phylum,-Class,-Family,-Genus,-Order) %>%
+  mutate(Species = if_else(Species== "", Genus, Species)) %>%
+  mutate(spp_hash=paste0(Species,".",Hash)) %>%
   # mutate(order_hash=paste(Order,Hash)) %>%
-  column_to_rownames("spp_hash") %>%
-  select(-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash) 
+  ## MPN: What's the point of all the stuff above if you are using the original Hash and not the new one you are making?
+  column_to_rownames("Hash")
+  select(-Phylum,-Class,-Family,-Genus,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-spp_hash)
 
 
 #Save
@@ -176,6 +225,10 @@ fido_18s_s1 %>%  ggplot(., aes(rowSums(.))) +
        x = "Row Sum",
        y = "ECDF") +
   theme_minimal()
+
+
+
+
 
 ##Assuming the code is the same as S1. Same comments apply :)
 ###S2
@@ -293,6 +346,16 @@ write.csv(fido_18s_s3_final,"data/fido/fido_18s_s3_ecdf_spp_hash.csv")
 
 
 ##MPN: Did not look past here. Please let me know if you want me to.
+
+
+
+
+
+
+
+
+
+
 # ########### PREVIOUS Threshold approach
 # #Threshold criteria (using >1 count in 30% of the samples)
 # fido_18s_s1_filt=fido_18s_s1%>%

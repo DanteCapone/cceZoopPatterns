@@ -94,7 +94,7 @@ chao_zhan=estimate_richness(Phy_merged_zhan_raw, measures="Chao1") %>%
 
 plot_data_coi=coi_metazoo_meta_all %>% as.data.frame() %>% 
   rownames_to_column("Sample_ID_short") %>%
-  left_join(.,shannon_coi, by="Sample_ID_short")
+  left_join(.,shannon_coi, by="Sample_ID_short") 
 
 plot_data_18s=zhan_metazoo_meta_all %>% as.data.frame() %>% 
   rownames_to_column("Sample_ID_short") %>%
@@ -104,20 +104,121 @@ plot_data_18s=zhan_metazoo_meta_all %>% as.data.frame() %>%
 
 
 ## Create a scatter plot with regression line, confidence intervals, and color by 'cycle'
+#My colors for Cycles
+my_palette <- c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a")
 
-coi_plot=ggplot(plot_data_coi, aes(x = PC1, y = Shannon, color=cycle)) +
-  geom_point(size=6, aes(shape=cycle)) +
+coi_plot=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
+  geom_point(size=6, aes(shape=cycle, fill=cycle))+
+  scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
   geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
-  labs(x = "PC1", y = "Shannon Diversity Index") +
+  coord_cartesian(ylim = c(1.5, 4), xlim = c(min(plot_data_18s$PC1), 5))+
+  scale_x_continuous(breaks = seq(-6, 5, by = 2))+
+  scale_fill_manual(values = my_palette) +
+  labs(x = expression(italic("PC1")), y = expression(italic("H'")), title="COI") +
   scale_color_discrete(name = "Cycle") +  # Adjust color legend label
-  theme_minimal()
+  theme_classic(base_family = "Liberation Serif")
 
-zhan_plot=ggplot(plot_data_18s, aes(x = PC1, y = Shannon, color=cycle)) +
-  geom_point(size=6, aes(shape=cycle)) +
+zhan_plot=ggplot(plot_data_18s, aes(x = PC1, y = Shannon)) +
+  geom_point(size=6, aes(shape=cycle, fill=cycle))+
+  scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
   geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
-  labs(x = "PC1", y = "Shannon Diversity Index") +
-  scale_color_discrete(name = "Cycle") +  # Adjust color legend label
-  theme_minimal()
+  coord_cartesian(ylim = c(1.5, 4), xlim = c(min(plot_data_18s$PC1), 5))+
+  scale_x_continuous(breaks = seq(-6, 5, by = 2))+
+  scale_fill_manual(values = my_palette) +
+  # scale_y_continuous(breaks = seq(0, 4, length.out = 10))+
+  labs(x = expression(italic("PC1")), y = expression(italic("H'")), title="18S") +
+  theme_classic(base_family = "Liberation Serif")
+zhan_plot
+
+coi_plot
+
+both_plot=grid.arrange(coi_plot,zhan_plot)
 
 
-grid.arrange(coi_plot,zhan_plot)
+#Save
+#COI
+output_path <- here("plots", "Q1_physical_analysis")
+ggsave(file.path(output_path, "pc1_vs_shannon_coi.png"), coi_plot, width = 10, height = 6, units = "in")
+
+#18s
+output_path <- here("plots", "Q1_physical_analysis")
+ggsave(file.path(output_path, "pc1_vs_shannon_18s.png"), zhan_plot, width = 10, height = 6, units = "in")
+
+#Both plots 
+output_path <- here("plots", "Q1_physical_analysis")
+ggsave(file.path(output_path, "pc1_vs_shannon_both.png"), both_plot, width = 10, height = 6, units = "in")
+
+
+
+#### PC1 vs Shannon for each size
+#compute Shannon index
+shannon_coi=estimate_richness(Phy_coi_raw, measures="Shannon") %>% 
+  rownames_to_column("Sample_ID")
+shannon_18s=estimate_richness(Phy_zhan_raw, measures="Shannon") %>% 
+  rownames_to_column("Sample_ID")
+
+
+plot_data_coi=coi_metazoo_meta %>% as.data.frame() %>% 
+  rownames_to_column("Sample_ID") %>%
+  left_join(.,shannon_coi, by="Sample_ID")%>%
+  mutate(max_size=as.factor(max_size))
+
+plot_data_18s=zhan_metazoo_meta %>% as.data.frame() %>% 
+  rownames_to_column("Sample_ID") %>%
+  left_join(.,shannon_18s, by="Sample_ID")%>%
+  mutate(max_size=as.factor(max_size))
+
+coi_plot_sized=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
+  geom_point(size = 8, aes(shape = cycle, fill = cycle), show.legend = TRUE) +
+  scale_shape_manual(values = c("1" = 21, "2" = 22, "3" = 24, "T1" = 23, "T2" = 25)) +
+  geom_smooth(method = "lm", se = TRUE, formula = y ~ x, aes(color = max_size), show.legend = FALSE, alpha = 0.5) +
+  coord_cartesian(ylim = c(0, 4), xlim = c(min(plot_data_coi$PC1), 5)) +
+  scale_x_continuous(breaks = seq(-6, 5, by = 1.5)) +
+  scale_y_continuous(breaks = seq(0, 4, by = 1)) +
+  scale_fill_manual(values = my_palette) +
+  labs(x = expression("PC1"), y = expression(italic("H'")), title = "COI", size = 20) +
+  # theme_classic(base_family = "Liberation Serif") +
+  theme_classic()+
+  facet_wrap(~max_size, nrow = 3, labeller = labeller(max_size = c("0.5" = "0.2-0.5 mm", "1" = "0.5-1 mm", "2" = "1-2 mm"))) + 
+  # Altering font sizes
+  theme(strip.text = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14)) 
+
+
+
+zhan_plot_sized <- ggplot(plot_data_18s, aes(x = PC1, y = Shannon)) +
+  geom_point(size = 8, aes(shape = cycle, fill = cycle), show.legend = TRUE) +
+  scale_shape_manual(values = c("1" = 21, "2" = 22, "3" = 24, "T1" = 23, "T2" = 25)) +
+  geom_smooth(method = "lm", se = TRUE, formula = y ~ x, aes(color = max_size), show.legend = FALSE, alpha = 0.5) +
+  coord_cartesian(ylim = c(0, 4), xlim = c(min(plot_data_18s$PC1), 5)) +
+  scale_x_continuous(breaks = seq(-6, 5, by = 1.5)) +
+  scale_y_continuous(breaks = seq(0, 4, by = 1)) +
+  scale_fill_manual(values = my_palette) +
+  labs(x = expression("PC1"), y = expression(italic("H'")), title = "18S", size = 20) +
+  # theme_classic(base_family = "Liberation Serif") +
+  theme_classic()+
+  facet_wrap(~max_size, nrow = 3, labeller = labeller(max_size = c("0.5" = "0.2-0.5 mm", "1" = "0.5-1 mm", "2" = "1-2 mm"))) + 
+  # Altering font sizes
+  theme(strip.text = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14)) 
+zhan_plot_sized
+
+
+#Save
+#COI
+output_path <- here("plots", "Q1_physical_analysis")
+ggsave(file.path(output_path, "pc1_vs_shannon_coi_sized.png"), coi_plot_sized, width = 10, height = 6, units = "in")
+ggsave(file.path(output_path, "pc1_vs_shannon_coi_sized.pdf"), coi_plot_sized, width = 10, height = 6, units = "in")
+
+#18s
+output_path <- here("plots", "Q1_physical_analysis")
+ggsave(file.path(output_path, "pc1_vs_shannon_18s_sized.png"), zhan_plot_sized, width = 10, height = 6, units = "in")
+ggsave(file.path(output_path, "pc1_vs_shannon_18s_sized.pdf"), plot=zhan_plot_sized, width = 10, height = 6, units = "in")
+
+
