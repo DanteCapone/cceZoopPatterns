@@ -1,5 +1,7 @@
 #Zooscan functions
 
+
+#Read in Zooscan Data, process and 
 readEcotaxa <- function(data) {
   #data: A .tsv file exported from Ecotaxa
   #select relevant columns to calculate data
@@ -15,7 +17,7 @@ readEcotaxa <- function(data) {
   
   #Caclulate volume filtered to get concentration
   data =data %>%
-    mutate(sample_conc=acq_sub_part/sample_tot_vol) %>%
+    mutate(sample_conc=acq_sub_part/sample_tot_vol*object_depth_max) %>%
     mutate(cycle= str_extract(object_id, "^[^_-]+"))
   
   #Select relevant columns
@@ -69,143 +71,164 @@ readEcotaxa <- function(data) {
 
   
 }
-# 
-# 
-# #Load in the data
-# 
-# 
-# biovolume <- read.table(here("data/Zooscan/ecotaxa_export_8030_20230823_2344.tsv"),header=TRUE, sep="\t", encoding="latin1")
-# 
-# #select relevant columns to calculate biovolume
-# #selected columns for database upload
-# biovolume$sample <- biovolume$sample_id
-# biovolume$Haul <- biovolume$sample_id
-# biovolume$Region <- "California Current"
-# biovolume$Detail_Location <- biovolume$sample_id
-# biovolume$Comment <- ""
-# biovolume$process_particle_pixel_size_mm <- 0.0106
-# 
-# 
-# #Caclulate volume filtered to get concentration
-# biovolume =biovolume %>%
-#   mutate(sample_conc=acq_sub_part/sample_tot_vol) %>%
-#   mutate(cycle= str_extract(object_id, "^[^_-]+"))
-# 
-# 
-# biovolume_select <- biovolume %>% dplyr::select(., sample_ship, sample_program, sample_id, Haul, Region, Detail_Location, Comment, 
-#                                                 object_date, object_time, object_lat, object_lon, sample_bottomdepth, object_depth_min,
-#                                                 object_depth_max, object_annotation_category, object_annotation_hierarchy, object_annotation_person_name,
-#                                                 sample, object_id, sample_id, sample_tot_vol, acq_sub_part,object_feret, 
-#                                                 object_area, object_major, object_minor, object_area_exc, process_particle_pixel_size_mm, acq_max_mesh,
-#                                                 sample_conc,cycle, object_annotation_status,acq_id)
-# 
-# 
-# 
-# 
-# #delete all non-plankton categories (adjust according to dataset)
-# # biovolume_select<-biovolume_select[!(biovolume_select$object_annotation_category=="bubble" | 
-# #                                        biovolume_select$object_annotation_category=="fiber<detritus"| 
-# #                                        biovolume_select$object_annotation_category=="Ellobiopsidae"|
-# #                                        biovolume_select$object_annotation_category=="multiple<plastic"|
-# #                                        biovolume_select$object_annotation_category=="multiple<other"|
-# #                                        biovolume_select$object_annotation_category=="detritus" | 
-# #                                        biovolume_select$object_annotation_category=="egg<Acartia sinjiensis" | 
-# #                                        biovolume_select$object_annotation_category=="artefact"| 
-# #                                        biovolume_select$object_annotation_category=="antenna<Crustacea" | 
-# #                                        biovolume_select$object_annotation_category=="leg<Crustacea"| 
-# #                                        biovolume_select$object_annotation_category=="dead<Copepoda"| 
-# #                                        biovolume_select$object_annotation_category=="Ostracoda X"| 
-# #                                        biovolume_select$object_annotation_category=="egg sac<egg"| 
-# #                                        biovolume_select$object_annotation_category=="feces" |
-# #                                        biovolume_select$object_annotation_category=="part<Copepoda" |
-# #                                        biovolume_select$object_annotation_category=="Foraminifera"),]
-# 
-# 
-# 
-# #Extract size fraction
-# biovolume_final=biovolume_select%>%
-#   mutate(size_fraction=as.factor(acq_max_mesh))
-# 
-# 
-# #Convert to mm
-# biovolume_final$area_mm2  <- biovolume_final$object_area * (biovolume_final$process_particle_pixel_size_mm**2) 
-# 
-# biovolume_final$major_mm  <- biovolume_final$object_major * biovolume_final$process_particle_pixel_size_mm
-# 
-# biovolume_final$minor_mm  <- biovolume_final$object_minor * biovolume_final$process_particle_pixel_size_mm
-# 
-# biovolume_final$area_exc_mm2  <- biovolume_final$object_area_exc * (biovolume_final$process_particle_pixel_size_mm**2) 
-# 
-# biovolume_final$area_majmin_mm2  <- pi * biovolume_final$major_mm/2 * biovolume_final$minor_mm/2
-# 
-# biovolume_final$esd_mm  <- 2 * (sqrt(biovolume_final$area_mm2/pi))
-# 
-# biovolume_final$esd_exc_mm  <- 2 * (sqrt(biovolume_final$area_exc_mm2/pi))
-# 
-# biovolume_final$esd_maj_min_mm <- 2 * (sqrt(biovolume_final$area_majmin_mm2/pi))
-# 
-# print(unique(biovolume_final$object_annotation_category))
-# 
-# 
-# 
-# 
-# biovolume_final %>%
-#   #Add size group
-#   mutate(size_fraction = case_when(
-#     esd_mm >= 0.2 & esd_mm < 0.5  ~ '0.2-0.5',
-#     esd_mm >= 0.5 & esd_mm < 1    ~ '0.5-1',
-#     esd_mm >= 1   & esd_mm < 2    ~ '1-2',
-#     esd_mm > 2                          ~ '>2',
-#     TRUE                                      ~ 'Other'
-#   ))-> biovolume_final
-# 
-# #Validated
-# biovolume_validated=biovolume_final %>%
-#   filter(object_annotation_status=="validated")%>%
-#   filter(!str_detect(object_annotation_hierarchy, regex("not-living", ignore_case = TRUE)))
-# 
-# relative_abundances=biovolume_validated %>%
-#   group_by(sample_id,size_fraction,object_annotation_category) %>%
-#   summarise(count = n()) %>%
-#   mutate(total = sum(count),
-#          relative_abundance = count / total)
-# 
-# ## Clean up some issues
-# relative_abundances=relative_abundances %>%
-#   mutate(sample_id = str_replace_all(sample_id, "-", "_"),
-#          sample_id = ifelse(sample_id == "c2_t1_h36", "ct2_t1_h36", sample_id),
-#          sample_id = ifelse(sample_id == "ct1_t8_h10", "c1_t8_h10", sample_id),
-#          sample_id = ifelse(sample_id == "ct2_t9_h19", "c2_t9_h19", sample_id),
-#          sample_id = ifelse(sample_id == "c3_bt6_h25", "c3_t6_h25", sample_id))
-# 
-# ##Lat and lon are funky so add back in from metadata
-# metadata=read.csv(here("data/CURRENT_WORKING_Metadata/env_metadata_impute_phyloseq_6.2.2023_for_map.csv"))
-# 
-# # Standardize key columns
-# metadata <- metadata %>%
-#   mutate(sample_id = tolower(str_replace_all(Sample_ID_short, "-", "_"))) %>%
-#   dplyr::select(sample_id,Latitude,Longitude)
-# 
-# # Merge dataframes
-# relative_abundances_map <- relative_abundances %>%
-#   left_join(metadata, by="sample_id")
-# 
-# 
-# #Select a taxa
-# taxa_pick="Calanoida"
-# taxa_sel=relative_abundances_map %>%
-#   filter(object_annotation_category==taxa_pick) %>%
-#   filter(size_fraction != ">2")
-# 
-# # taxa_sel_valid=taxa_sel %>%
-# #   filter(object_annotation_status=="validated") %>%
-# #   group_by(object_lat,object_lon,sample_id, size_fraction,sample_conc) %>%
-# #   summarize(count = n()) %>%
-# #   mutate(concentraion=sample_conc*count) 
-# #   
-# # taxa_sel_all=taxa_sel %>%
-# #   group_by(object_lat,object_lon,sample_id, size_fraction,sample_conc) %>%
-# #   summarize(count = n()) %>%
-# #   mutate(concentraion=sample_conc*count) 
-# 
-# 
+
+
+#Convert Zooscan measurement to C
+transform_by_taxa_group <- function(df, length_type) {
+  
+  if (length_type == "esd"){
+  df %>% mutate(dryweight_C_ug=case_when(
+    object_annotation_category=="Copepoda<Maxillopoda" ~ copepods(esd_mm),
+    object_annotation_category=="Calanoida" ~ copepods(esd_mm),
+    object_annotation_category=="Oithonidae" ~ copepods(esd_mm),
+    object_annotation_category=="Harpacticoida" ~ copepods(esd_mm),
+    object_annotation_category=="Poecilostomatoida" ~ copepods(esd_mm),
+    object_annotation_category=="Eucalanidae" ~ copepods(esd_mm),
+    object_annotation_category=="Euphausiacea" ~ euphausiids(esd_mm ),
+    object_annotation_category=="Hydrozoa" ~ hydrozoans(esd_mm),
+    object_annotation_category=="Polychaeta" ~ polychaetes(esd_mm),
+    object_annotation_category=="Ostracoda" ~ ostracods(esd_mm),
+    object_annotation_category=="Eumalacostraca" ~ decapods(esd_mm),
+    object_annotation_category=="tetrazoid" ~ pyrosomes(esd_mm),
+    object_annotation_category=="Salpida" ~ salps(esd_mm),
+    object_annotation_category=="Hyperiidea" ~ hyperiids(esd_mm),
+    object_annotation_category=="Pteropoda" ~ thecosomes(esd_mm),
+    object_annotation_category=="Doliolida" ~ doliolids(esd_mm),
+    object_annotation_category=="Chaetognatha" ~ chaetognaths(esd_mm),
+    TRUE ~ NA_real_))->df
+    
+  } else if (length_type == "feret"){
+    df %>% mutate(dryweight_C_ug=case_when(
+      object_annotation_category=="Copepoda<Maxillopoda" ~ copepods(object_feret),
+      object_annotation_category=="Calanoida" ~ copepods(object_feret),
+      object_annotation_category=="Oithonidae" ~ copepods(object_feret),
+      object_annotation_category=="Harpacticoida" ~ copepods(object_feret),
+      object_annotation_category=="Poecilostomatoida" ~ copepods(object_feret),
+      object_annotation_category=="Eucalanidae" ~ copepods(object_feret),
+      object_annotation_category=="Euphausiacea" ~ euphausiids(object_feret),
+      object_annotation_category=="Hydrozoa" ~ hydrozoans(object_feret),
+      object_annotation_category=="Polychaeta" ~ polychaetes(object_feret),
+      object_annotation_category=="Ostracoda" ~ ostracods(object_feret),
+      object_annotation_category=="Eumalacostraca" ~ decapods(object_feret),
+      object_annotation_category=="tetrazoid" ~ pyrosomes(object_feret),
+      object_annotation_category=="Salpida" ~ salps(object_feret),
+      object_annotation_category=="Hyperiidea" ~ hyperiids(object_feret),
+      object_annotation_category=="Pteropoda" ~ thecosomes(object_feret),
+      object_annotation_category=="Doliolida" ~ doliolids(object_feret),
+      object_annotation_category=="Chaetognatha" ~ chaetognaths(object_feret),
+      TRUE ~ NA_real_))->df
+      
+  } else {
+      # Do something else when the input is neither "esd" nor "feret"
+      print("Default to using feret")
+      df %>% mutate(dryweight_C_ug=case_when(
+        object_annotation_category=="Copepoda<Maxillopoda" ~ copepods(object_feret),
+        object_annotation_category=="Calanoida" ~ copepods(object_feret),
+        object_annotation_category=="Oithonidae" ~ copepods(object_feret),
+        object_annotation_category=="Harpacticoida" ~ copepods(object_feret),
+        object_annotation_category=="Poecilostomatoida" ~ copepods(object_feret),
+        object_annotation_category=="Eucalanidae" ~ copepods(object_feret),
+        object_annotation_category=="Euphausiacea" ~ euphausiids(object_feret ),
+        object_annotation_category=="Hydrozoa" ~ hydrozoans(object_feret ),
+        object_annotation_category=="Polychaeta" ~ polychaetes(object_feret ),
+        object_annotation_category=="Ostracoda" ~ ostracods(object_feret ),
+        object_annotation_category=="Eumalacostraca" ~ decapods(object_feret ),
+        object_annotation_category=="tetrazoid" ~ pyrosomes(object_feret ),
+        object_annotation_category=="Salpida" ~ salps(object_feret ),
+        object_annotation_category=="Hyperiidea" ~ hyperiids(object_feret ),
+        object_annotation_category=="Pteropoda" ~ thecosomes(object_feret ),
+        object_annotation_category=="Doliolida" ~ doliolids(object_feret ),
+        object_annotation_category=="Chaetognatha" ~ chaetognaths(object_feret ),
+        TRUE ~ NA_real_))->df
+      }
+    
+    
+  
+  
+  return(df)
+}
+
+#Taxon-specific functions for biomass from Laveniegos and Ohman 2007
+copepods <- function(ESD) {
+  log_C_microgram <- -6.76 + 2.512 * log10(ESD*1000)
+  C_ug=10^(log_C_microgram)
+  return(C_ug)
+}
+
+euphausiids <- function(ESD) {
+  log_C_microgram <- -0.473 + 3.174 * log10(ESD)
+  C_ug=10^(log_C_microgram)
+  return(C_ug)
+}
+
+ostracods <- function(ESD) {
+  C_ug =(17.072*ESD^2.545)*0.398
+  return(C_ug)
+}
+
+hyperiids <- function(ESD) {
+  log_C_mg = 2.314 + 2.957*log10(ESD) #mg
+  C_ug=10^(log_C_mg)*1000*0.365
+  return(C_ug)
+}
+
+decapods <- function(ESD) {
+  coefs=mean(0.133,0.322,0.810)
+  exps=mean(2.44,2.31,1.77)
+  C_mg =coefs*(ESD)^exps
+  C_ug=C_mg*1000
+  
+  return(C_ug)
+}
+
+appendicularians <- function(ESD) {
+  DW_ug = 38.8*ESD^2.574
+  C_ug = 0.49*DW_ug^1.12
+  return(C_ug)
+}
+
+doliolids<- function(ESD) {
+  C_ug = 0.51*(ESD)^2.28
+  return(C_ug)
+}
+
+salps<- function(ESD) {
+  coefs=mean(10.91,5.10,1.00,0.47,0.20,3.00,1.40,1.01,1.62)
+  exps=mean(1.54,1.75,2.26,2.22,2.60,1.81,2.05,2.06,1.93)
+  C_ug=coefs*ESD^exps
+  return(C_ug)
+
+}
+
+pyrosomes<- function(ESD) {
+  DW_mg = 0.111*ESD^1.90
+  C_ug=DW_mg*.113*1000
+  return(C_ug)
+}
+
+thecosomes<- function(ESD) {
+  log_C_ug = 1.469 + 3.102*log10(ESD)
+  C_ug=10^(log_C_ug)
+  return(C_ug)
+}
+
+chaetognaths <- function(ESD) {
+  ESD=as.numeric(ESD)  # Add this line to print the class of ESD
+  C_ug = 0.0956 * ESD^2.9093
+  return(C_ug)
+}
+
+polychaetes<- function(ESD) {
+  C_ug = 7.58*ESD^1.3848
+  return(C_ug)
+}
+
+hydrozoans<- function(ESD) {
+  C_ug = 20.47*ESD^0.834
+  return(C_ug)
+}
+
+
+
+
+

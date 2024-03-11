@@ -14,9 +14,9 @@ here()
 
 ###Load in the ECDF-filtered data for the 18S primer using long format species and hash name so I ca identify taxa
 ##First Size 1
-fido_input_filt=read.csv(here("data/EDCF/18s/fido_18s_s1_ecdf_spp_hash.csv"), header=TRUE, check.names = FALSE, row.names = 1)
-fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_spp_hash_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
-  column_to_rownames("spp_hash")
+#Phyloseq Filtered
+fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
+  column_to_rownames("Family")
 
   #Metadata
   meta_18s=read.csv(file.path("data/fido/meta_18s_unaveraged_s1.csv"), header=TRUE) %>%
@@ -32,11 +32,6 @@ fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_spp_hash_phy.csv")
   X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
   Y_s1=fido_input_filt%>% as.matrix() 
   
-  ## Shortening hash portion of the name a bit to make more readable
-  i <- 1:nrow(Y_s1)
-  rownames(Y_s1) <- sub("NA", "", rownames(Y_s1))
-  rownames(Y_s1) <- paste0("seq_", i, "_", rownames(Y_s1))
-  rownames(Y_s1) <- sub("^(.*\\..*\\..{5}).*", "\\1",(rownames(Y_s1)))
   
   
   #Fit pibble model 
@@ -149,19 +144,12 @@ beepr::beep(12)
 
 #Save final data
 current_date <- format(Sys.Date(), "%m_%d_%Y")
-# write.csv(final_data_s1,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s1.csv")))
 write.csv(final_data_s1,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s1_phy.csv")))
 
 
-##Barplots of predicted C0 proportions
-taxa_list=final_data_s1 %>%
-  arrange(desc(n_reads)) %>%
-  select(coord) %>% unique()
-taxa_sel=taxa_list[1:10,]
-focus.coord <- taxa_sel
 
 ##MPN: Are you aggregating over the samples
-final_data_s1 %>% filter(coord %in% focus.coord) %>%
+final_data_s1 %>% 
   ggplot(., aes(fill=coord, y=n_reads, x=as.factor(cycle_num))) +
   geom_bar(position="stack", stat="identity", width=0.5)+
   scale_fill_discrete(name="ASV")+
@@ -224,9 +212,8 @@ p1
 ############### Let's repeat for other sizes now ###############
 
 ############First 0.5-1############
-fido_input_filt=read.csv(file.path("data/EDCF/18s/fido_18s_s2_ecdf_spp_hash.csv"), header=TRUE, check.names = FALSE, row.names = 1)
-fido_input_filt=read.csv(file.path("data/fido/phy/fido_18s_s2_ecdf_spp_hash_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>%
-  column_to_rownames("spp_hash")
+fido_input_filt=read.csv(file.path("data/fido/phy/fido_18s_s2_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>%
+  column_to_rownames("Family")
 #Metadata
 meta_18s=read.csv(file.path("data/fido","meta_18s_unaveraged_s2.csv"), header=TRUE) %>%
   select(-c(X)) %>%
@@ -242,11 +229,6 @@ X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
 
 Y_s2=fido_input_filt%>% as.matrix() 
 
-## MPN: Cleaning the names slightly to make it easier to read
-i <- 1:nrow(Y_s2)
-rownames(Y_s2) <- sub("NA", "", rownames(Y_s2))
-rownames(Y_s2) <- paste0("seq_", i, "_", rownames(Y_s2))
-rownames(Y_s2) <- sub("^(.*\\..*\\..{5}).*", "\\1",(rownames(Y_s2)))
 
 fit <- pibble(Y_s2, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
 
@@ -319,7 +301,6 @@ for(s in samples_to_loop$sample){
 beepr::beep(4)
 
 current_date <- format(Sys.Date(), "%m_%d_%Y")
-# write.csv(final_data_s2,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s2.csv")))
 write.csv(final_data_s2,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s2_phy.csv")))
 
 
@@ -361,9 +342,8 @@ p2
 
 ######### Final size
 ##### 1-2mm####
-fido_input_filt=read.csv(file.path("data/EDCF/18s/fido_18s_s3_ecdf_spp_hash.csv"), header=TRUE, check.names = FALSE, row.names = 1)
-fido_input_filt=read.csv(file.path("data/fido/phy/fido_18s_s3_ecdf_spp_hash_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>%
-  column_to_rownames("spp_hash")
+fido_input_filt=read.csv(file.path("data/fido/phy/fido_18s_s3_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>%
+  column_to_rownames("Family")
 
 
 #Metadata
@@ -380,12 +360,6 @@ meta_18s <- meta_18s[match(colnames(fido_input_filt), meta_18s$Sample_name),]
 X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
 
 Y_s3=fido_input_filt%>% as.matrix() 
-
-## MPN: Cleaning the names slightly to make it easier to read
-i <- 1:nrow(Y_s3)
-rownames(Y_s3) <- sub("NA", "", rownames(Y_s3))
-rownames(Y_s3) <- paste0("seq_", i, "_", rownames(Y_s3))
-rownames(Y_s3) <- sub("^(.*\\..*\\..{5}).*", "\\1",(rownames(Y_s3)))
 
 fit <- pibble(Y_s3, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
 
@@ -461,7 +435,6 @@ for(s in samples_to_loop$sample){
 beepr::beep(7)
 
 current_date <- format(Sys.Date(), "%m_%d_%Y")
-write.csv(final_data_s3,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s3.csv")))
 write.csv(final_data_s3,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s3_phy.csv")))
 
 ### Maps for OG proportions
