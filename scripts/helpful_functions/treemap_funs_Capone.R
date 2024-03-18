@@ -87,8 +87,8 @@ phyloseq_long_treemap <- function(df, group1, group2, title, colors=NULL, label_
   
   if (label_group1){
     gg <- gg +
-      treemapify::geom_treemap_subgroup_text(place = "centre", grow = T, alpha = 0.5, colour =
-                                               "#ededed", fontface = "italic", min.size = 0)
+      treemapify::geom_treemap_subgroup_text(place = "centre", grow = T, alpha = 0.8, colour =
+                                               "white", fontface = "italic", min.size = 0)
   }
   
   if (is.null(colors)){
@@ -104,116 +104,7 @@ phyloseq_long_treemap <- function(df, group1, group2, title, colors=NULL, label_
 }
 
 
-
-
-phyloseq_long_treemap_top20 <- function(df, group1, group2, title, colors=NULL, label_group1 = TRUE) {
-  
-  df <- df %>%
-    group_by({{group1}}, {{group2}}) %>%
-    summarise(n_reads=sum(n_reads, na.rm = TRUE)) %>%
-    arrange(desc(n_reads))
-  
-  # # Replace blank values with NA using mutate
-  # df <- df %>%
-  #   mutate({{group2}} = ifelse({{group2}} == "", NA, {{group2}}))%>%
-  #   mutate({{group1}} = ifelse({{group1}} == "", NA, {{group1}}))
-  
-  #Remove NA and fake NA
-  df=na.omit(df)
-  df=df %>%
-    filter({{group1}}!='NA' | {{group2}}!='NA')
-    #Select top 20
-  df1=df[1:20,]
-  
-  
-  print((df1 %>% select({{group1}},{{group2}})))
-  gg <- ggplot(df1, aes(area = (n_reads),
-                        fill = {{group1}},
-                        label = {{group2}},
-                        subgroup = {{group1}})) +
-    ggtitle(title) +
-    treemapify::geom_treemap() +
-    treemapify::geom_treemap_subgroup_border() +
-    treemapify::geom_treemap_text(colour = "black", place = "topleft", reflow = T,
-                                  padding.x =  grid::unit(2, "mm"),
-                                  padding.y = grid::unit(4, "mm"),
-                                  min.size=6)  +
-    theme(legend.position="none", plot.title = element_text(size = 16, face = "bold"))
-  
-  if (label_group1){
-    gg <- gg +
-      treemapify::geom_treemap_subgroup_text(place = "centre", grow = T, alpha = 0.8, colour =
-                                               "black", fontface = "italic", min.size = 2)
-  }
-  
-  if (is.null(colors)){
-    gg <- gg + scale_fill_viridis_d()
-  } else {
-    gg <- gg + scale_fill_manual(values = colors)
-  }
-  # print(gg)
-  return(gg)
-  treemap_list <- list(gg = gg, df=df)
-  return(treemap_list)
-}
-
-
-## TOP 10
-
-phyloseq_long_treemap_top10 <- function(df, group1, group2, title, colors=NULL, label_group1 = TRUE) {
-  
-  df <- df %>%
-    group_by({{group1}}, {{group2}}) %>%
-    summarise(n_reads=sum(n_reads, na.rm = TRUE)) %>%
-    arrange(desc(n_reads))
-  
-  # # Replace blank values with NA using mutate
-  # df <- df %>%
-  #   mutate({{group2}} = ifelse({{group2}} == "", NA, {{group2}}))%>%
-  #   mutate({{group1}} = ifelse({{group1}} == "", NA, {{group1}}))
-  
-  
-  #Remove NA and fake NA
-  df=na.omit(df)
-  df=df %>%
-    filter({{group1}}!='NA' | {{group2}}!='NA')
-  #Select top 20
-  df1=df[1:10,]
-  
-  print((df1 %>% select({{group1}},{{group2}})))
-  gg <- ggplot(df1, aes(area = (n_reads),
-                        fill = {{group1}},
-                        label = {{group2}},
-                        subgroup = {{group1}})) +
-    ggtitle(title) +
-    treemapify::geom_treemap() +
-    treemapify::geom_treemap_subgroup_border() +
-    treemapify::geom_treemap_text(colour = "black", place = "topleft", reflow = T,
-                                  padding.x =  grid::unit(2, "mm"),
-                                  padding.y = grid::unit(4, "mm"),
-                                  min.size=6)  +
-    theme(legend.position="none", plot.title = element_text(size = 16, face = "bold"))
-  
-  if (label_group1){
-    gg <- gg +
-      treemapify::geom_treemap_subgroup_text(place = "centre", grow = T, alpha = 0.8, colour =
-                                               "black", fontface = "italic", min.size = 0)
-  }
-  
-  if (is.null(colors)){
-    gg <- gg + scale_fill_viridis_d()
-  } else {
-    gg <- gg + scale_fill_manual(values = colors)
-  }
-  # print(gg)
-  return(gg)
-  treemap_list <- list(gg = gg, df=df)
-  return(treemap_list)
-}
-
-
-
-## TOP 10
+## TOP Taxa 
 
 phyloseq_long_treemap_top <- function(df, group1, group2, title,top, colors=NULL, label_group1 = TRUE) {
   
@@ -252,7 +143,7 @@ phyloseq_long_treemap_top <- function(df, group1, group2, title,top, colors=NULL
   if (label_group1){
     gg <- gg +
       treemapify::geom_treemap_subgroup_text(place = "centre", grow = T, alpha = 0.8, colour =
-                                               "black", fontface = "italic", min.size = 0)
+                                               "white", fontface = "italic", min.size = 0)
   }
   
   if (is.null(colors)){
@@ -266,3 +157,59 @@ phyloseq_long_treemap_top <- function(df, group1, group2, title,top, colors=NULL
   return(treemap_list)
 }
 
+
+
+# Next Taxa -------------------------------------------------------------
+
+## 11-20
+
+phyloseq_long_treemap_next <- function(df, group1, group2, title,subset_taxa, colors=NULL, label_group1 = TRUE) {
+  
+  df <- df %>%
+    group_by({{group1}}, {{group2}}) %>%
+    summarise(n_reads=sum(n_reads, na.rm = TRUE)) %>%
+    arrange(desc(n_reads))
+  
+  # # Replace blank values with NA using mutate
+  # df <- df %>%
+  #   mutate({{group2}} = ifelse({{group2}} == "", NA, {{group2}}))%>%
+  #   mutate({{group1}} = ifelse({{group1}} == "", NA, {{group1}}))
+  
+  
+  #Remove NA and fake NA
+  df=na.omit(df)
+  df=df %>%
+    filter({{group1}}!='NA' | {{group2}}!='NA')
+  #Select top 20
+  df1=df[subset_taxa:subset_taxa+10,]
+  
+  print((df1 %>% select({{group2}})))
+  gg <- ggplot(df1, aes(area = (n_reads),
+                        fill = {{group1}},
+                        label = {{group2}},
+                        subgroup = {{group1}})) +
+    ggtitle(title) +
+    treemapify::geom_treemap() +
+    treemapify::geom_treemap_subgroup_border() +
+    treemapify::geom_treemap_text(colour = "black", place = "topleft", reflow = T,
+                                  padding.x =  grid::unit(2, "mm"),
+                                  padding.y = grid::unit(4, "mm"),
+                                  min.size=6)  +
+    theme(legend.position="none", plot.title = element_text(size = 16, face = "bold"))
+  
+  if (label_group1){
+    gg <- gg +
+      treemapify::geom_treemap_subgroup_text(place = "centre", grow = T, alpha = 0.8, colour =
+                                               "white", fontface = "italic", min.size = 0)
+  }
+  
+  if (is.null(colors)){
+    gg <- gg + scale_fill_viridis_d()
+  } else {
+    gg <- gg + scale_fill_manual(values = colors)
+  }
+  # print(gg)
+  return(gg)
+  treemap_list <- list(gg = gg, df=df)
+  return(treemap_list)
+}

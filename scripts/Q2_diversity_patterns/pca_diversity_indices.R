@@ -34,7 +34,8 @@ env_metadata<-read.csv(here("data/physical_environmental_data/env_metadata_imput
 coi_metazoo_otu=read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
-coi_metazoo_meta=env_metadata
+coi_metazoo_meta=env_metadata 
+  
 coi_metazoo_taxa=read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_tax.csv")) %>% column_to_rownames("Hash")
 
 
@@ -110,6 +111,23 @@ plot_data_18s=zhan_metazoo_meta_all %>% as.data.frame() %>%
   left_join(.,shannon_18s, by="Sample_ID_short")
 
 #Correlate
+#Test corr
+# Calculate Pearson's correlation coefficient and p-value
+correlation_result_coi <- cor.test(plot_data_coi$PC1, plot_data_coi$Shannon, method = "pearson")
+correlation_result_18s <- cor.test(plot_data_18s$PC1, plot_data_18s$Shannon, method = "pearson")
+
+# Extract Pearson's r and p-value
+pearsons_r <- correlation_result_coi$estimate
+p_value <- correlation_result_coi$p.value
+
+pearsons_r <- correlation_result_18s$estimate
+p_value <- correlation_result_18s$p.value
+
+# Print Pearson's r and p-value
+print(paste("Pearson's r:", round(pearsons_r, 3)))
+print(paste("p-value:", format(p_value, scientific = TRUE)))
+
+
 # Run linear regression
 lm_model <- lm(Shannon ~ PC1, data = plot_data_18s)
 
@@ -117,22 +135,22 @@ lm_model <- lm(Shannon ~ PC1, data = plot_data_18s)
 lm_summary <- summary(lm_model)
 
 # Extracting R-squared and p-value
-r_squared <- lm_summary$r.squared
+r_squared <- lm_summary
 p_value <- lm_summary$coefficients[2, 4]
 
 
 
 #Correlation calculations
-lm_model_18s <- lm(Shannon ~ PC1, data = plot_data_coi)
+lm_model_coi <- lm(Shannon ~ PC1, data = plot_data_coi)
 
 # Summary of linear regression
-summary(lm_model_18s)
+summary(lm_model_coi)
 
 ## Create a scatter plot with regression line, confidence intervals, and color by 'cycle'
 #My colors for Cycles
 my_palette=custom_pallete()
 coi_plot=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
-  geom_point(size=6, aes(shape=cycle, fill=cycle))+
+  geom_point(size=8, aes(shape=cycle, fill=cycle))+
   scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
   geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
   coord_cartesian(ylim = c(1.5, 4), xlim = c(min(plot_data_18s$PC1), 7))+
@@ -140,16 +158,33 @@ coi_plot=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
   scale_fill_manual(values = my_palette) +
   labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI") +
   scale_color_discrete(name = "Cycle") +  # Adjust color legend label
-  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.5,
-           )+
-  theme_classic(base_family = "Liberation Serif")
+  stat_cor(method="pearson", label.x = 4, label.y = 3.5)+
+  # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.7)+
+  theme_classic()
 coi_plot
+saving=1
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_coi_all.pdf"), 
+    plot = coi_plot,
+    width = 8,  # Width in inches
+    height = 6  # Height in inches
+  ) }
 
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_coi_all.png"), 
+    plot = coi_plot,
+    width = 8,  # Width in inches
+    height = 6  # Height in inches
+  ) }
+
+#18s all
 zhan_plot=ggplot(plot_data_18s, aes(x = PC1, y = Shannon)) +
-  geom_point(size=6, aes(shape=cycle, fill=cycle))+
+  geom_point(size=8, aes(shape=cycle, fill=cycle))+
   scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
   geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
-  coord_cartesian(ylim = c(1.5, 4), xlim = c(min(plot_data_18s$PC1), 7))+
+  coord_cartesian(ylim = c(0, 4), xlim = c(min(plot_data_18s$PC1), 7))+
   scale_x_continuous(breaks = seq(-6, 7, by = 2))+
   scale_fill_manual(values = my_palette) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
@@ -158,17 +193,32 @@ zhan_plot=ggplot(plot_data_18s, aes(x = PC1, y = Shannon)) +
         strip.text = element_text(size = 14))+
   # scale_y_continuous(breaks = seq(0, 4, length.out = 10))+
   scale_fill_manual(values = my_palette) +
-  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI") +
+  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="18S") +
   scale_color_discrete(name = "Cycle") +  # Adjust color legend label
-  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.5,
-  )+
-  theme_classic(base_family = "Liberation Serif")
+  stat_cor(method="pearson", label.x = 4, label.y = 3.5)+
+  theme_classic()
 zhan_plot
-ez_save(zhan_plot,"plots/Q2_diversity_indices/","pc1_vs_shannon_18s_all")
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_18s_all.pdf"), 
+    plot = zhan_plot,
+    width = 8,  # Width in inches
+    height = 6  # Height in inches
+  ) }
 
-coi_plot
-ez_save(coi_plot,"plots/Q2_diversity_indices/","pc1_vs_shannon_coi_all")
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_18s_all.png"), 
+    plot = zhan_plot,
+    width = 8,  # Width in inches
+    height = 6  # Height in inches
+  ) }
 
+
+
+
+
+#Both
 both_plot=grid.arrange(coi_plot,zhan_plot)
 both_plot
 ez_save(both_plot,"plots/Q2_diversity_indices/","pc1_vs_shannon_both")
@@ -209,61 +259,130 @@ plot_data_18s=zhan_metazoo_meta %>% as.data.frame() %>%
   left_join(.,shannon_18s, by="Sample_ID")%>%
   mutate(max_size=as.factor(max_size))
 
+#Test corr
+# Calculate Pearson's correlation coefficient and p-value
+correlation_result <- cor.test(plot_data_coi$PC1, plot_data_coi$Shannon, method = "pearson")
+
+# Extract Pearson's r and p-value
+pearsons_r <- correlation_result$estimate
+p_value <- correlation_result$p.value
+
+# Print Pearson's r and p-value
+print(paste("Pearson's r:", round(pearsons_r, 3)))
+print(paste("p-value:", format(p_value, scientific = TRUE)))
+
+#
+facet_correlation <- plot_data_ %>%
+  group_by(max_size) %>%
+  summarise(pearsons_r = cor(PC1, Shannon, method = "pearson"), 
+            p_value = cor.test(PC1, Shannon, method = "pearson")$p.value)
+
+# Print the result
+print(facet_correlation)
+
 coi_plot_sized=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
-  geom_point(size = 8, aes(shape = cycle, fill = cycle), show.legend = TRUE) +
+  geom_point(size = 6, aes(shape = cycle, fill = cycle), show.legend = TRUE) +
   scale_shape_manual(values = c("1" = 21, "2" = 22, "3" = 24, "T1" = 23, "T2" = 25)) +
   geom_smooth(method = "lm", se = TRUE, formula = y ~ x, aes(color = max_size), show.legend = FALSE, alpha = 0.5) +
   coord_cartesian(ylim = c(0, 5), xlim = c(min(plot_data_coi$PC1),  max(plot_data_coi$PC1))) +
   scale_x_continuous(breaks = seq(-6, max(plot_data_coi$PC1), by = 1.5)) +
   scale_y_continuous(breaks = seq(0, 6, by = 1)) +
   scale_fill_manual(values = my_palette) +
-  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title = "COI", size = 20) +
-  # theme_classic(base_family = "Liberation Serif") +
+  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI") +
+  # scale_color_discrete(name = "Cycle") +  # Adjust color legend label
+  stat_cor(method="pearson", label.x = 4, label.y = 4,
+           size=5)+
   theme_classic()+
-  facet_wrap(~max_size, nrow = 3, labeller = labeller(max_size = c("0.5" = "0.2-0.5 mm", "1" = "0.5-1 mm", "2" = "1-2 mm"))) + 
+  facet_wrap(~max_size, nrow = 3, labeller = labeller(max_size = c("0.5" = "0.2-0.5 mm", "1" = "0.5-1 mm", "2" = "1-2 mm"))) +
   # Altering font sizes
-  theme(strip.text = element_text(size = 12),
-        axis.text.x = element_text(size = 12),
-        axis.text.y = element_text(size = 12),
-        axis.title.x = element_text(size = 14),
-        axis.title.y = element_text(size = 14)) +
+  theme(strip.text = element_text(size = 14),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16)) +
   guides(color = "none") 
 coi_plot_sized
-ez_save(coi_plot_sized,"plots/Q2_diversity_indices/","pc1_vs_shannon_coi_sized")
+
+saving=1
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_coi_sized.pdf"), 
+    plot = coi_plot_sized,
+    width = 12,  # Width in inches
+    height = 10  # Height in inches
+  ) }
+
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_coi_sized.png"), 
+    plot = coi_plot_sized,
+    width = 12,  # Width in inches
+    height = 10  # Height in inches
+  ) }
 
 
+#Test corr
+# Calculate Pearson's correlation coefficient and p-value
+correlation_result <- cor.test(plot_data_18s$PC1, plot_data_18s$Shannon, method = "pearson")
+
+# Extract Pearson's r and p-value
+pearsons_r <- correlation_result$estimate
+p_value <- correlation_result$p.value
+
+# Print Pearson's r and p-value
+print(paste("Pearson's r:", round(pearsons_r, 3)))
+print(paste("p-value:", format(p_value, scientific = TRUE)))
+
+#
+facet_correlation <- plot_data_18s %>%
+  group_by(max_size) %>%
+  summarise(pearsons_r = cor(PC1, Shannon, method = "pearson"), 
+            p_value = cor.test(PC1, Shannon, method = "pearson")$p.value)
+
+# Print the result
+print(facet_correlation)
+
+
+#Plot to visualize
 zhan_plot_sized <- ggplot(plot_data_18s, aes(x = PC1, y = Shannon)) +
-  geom_point(size = 8, aes(shape = cycle, fill = cycle), show.legend = TRUE) +
+  geom_point(size = 6, aes(shape = cycle, fill = cycle), show.legend = TRUE) +
   scale_shape_manual(values = c("1" = 21, "2" = 22, "3" = 24, "T1" = 23, "T2" = 25)) +
   geom_smooth(method = "lm", se = TRUE, formula = y ~ x, aes(color = max_size), show.legend = FALSE, alpha = 0.5) +
   coord_cartesian(ylim = c(0, 4), xlim = c(min(plot_data_18s$PC1), max(plot_data_18s$PC1)+1)) +
   scale_x_continuous(breaks = seq(-6, max(plot_data_18s$PC1)+1, by = 1.5)) +
   scale_y_continuous(breaks = seq(0, 4, by = 1)) +
   scale_fill_manual(values = my_palette) +
-  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title = "18S", size = 20) +
-  # theme_classic(base_family = "Liberation Serif") +
+  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="18S") +
+  # scale_color_discrete(name = "Cycle") +  # Adjust color legend label
+  stat_cor(method="pearson", label.x = 4, label.y = 3.5,
+  size=5)+
   theme_classic()+
   facet_wrap(~max_size, nrow = 3, labeller = labeller(max_size = c("0.5" = "0.2-0.5 mm", "1" = "0.5-1 mm", "2" = "1-2 mm"))) + 
   # Altering font sizes
-  theme(strip.text = element_text(size = 12),
-        axis.text.x = element_text(size = 12),
-        axis.text.y = element_text(size = 12),
-        axis.title.x = element_text(size = 14),
-        axis.title.y = element_text(size = 14)) +
+  theme(strip.text = element_text(size = 14),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title.x = element_text(size = 16),
+        axis.title.y = element_text(size = 16)) +
   guides(color = "none") 
 zhan_plot_sized
-ez_save(zhan_plot_sized,"plots/Q2_diversity_indices/","pc1_vs_shannon_18s_sized")
+
+saving=1
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_18s_sized.pdf"), 
+    plot = zhan_plot_sized,
+    width = 12,  # Width in inches
+    height = 10  # Height in inches
+  ) }
+
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_18s_sized.png"), 
+    plot = zhan_plot_sized,
+    width = 12,  # Width in inches
+    height = 10  # Height in inches
+  ) }
 
 
-#Save
-#COI
-output_path <- here("plots", "Q1_physical_analysis")
-ggsave(file.path(output_path, "pc1_vs_shannon_coi_sized.png"), coi_plot_sized, width = 10, height = 6, units = "in")
-ggsave(file.path(output_path, "pc1_vs_shannon_coi_sized.pdf"), coi_plot_sized, width = 10, height = 6, units = "in")
-
-#18s
-output_path <- here("plots", "Q1_physical_analysis")
-ggsave(file.path(output_path, "pc1_vs_shannon_18s_sized.png"), zhan_plot_sized, width = 10, height = 6, units = "in")
-ggsave(file.path(output_path, "pc1_vs_shannon_18s_sized.pdf"), plot=zhan_plot_sized, width = 10, height = 6, units = "in")
-
-
+#On PCR Biad mitigated data 
