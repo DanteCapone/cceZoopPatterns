@@ -29,21 +29,48 @@ set.seed(899)
 meta_corr=metacoi %>% dplyr::select(-Sample_ID_short) %>%
   cor(.)
 
+# Compute p-values using correlation matrix
+p_values <- cor.mtest(metacoi %>% dplyr::select(-Sample_ID_short))$p %>%
+  as.data.frame() %>%
+  rownames_to_column("variable") %>%
+  pivot_longer(cols = -variable, names_to = "variable2", values_to = "p.value")%>%
+  # Adjust p-values using Benjamini-Hochberg correction
+  mutate(p.adj= p.adjust(p.value, method = "BH") )
 
-# Convert the correlation matrix into a long format
-cor_long <- as.data.frame(as.table(meta_corr))
-
-# Plot using ggplot2
-ggplot(data = cor_long, aes(x=Var1, y=Var2)) +
-  geom_tile(aes(fill=Freq), color="white") +
-  scale_fill_gradient2(low="blue", high="red", mid="white", 
-                       midpoint=0, limit=c(-1,1), space="Lab", 
-                       name="Correlation") +
-  geom_text(aes(label=sprintf("%.2f", Freq)), vjust=1) +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle=45, hjust=1))
+p_vals_adj=p_values %>%
+  group_by(variable, variable2) %>%
+  summarise(p.adj = mean(p.adj, na.rm = TRUE)) %>%
+  ungroup() %>% # Ensure to ungroup the data after summarizing 
+  pivot_wider(names_from = variable, values_from = p.adj) %>%
+  column_to_rownames("variable2") %>%
+  as.matrix()
 
 
-## Violin plots
+
+
+# Corr using corrplot --------------------------------------------------------------------
+
+# Sort the row names and column names to ensure alignment
+meta_corr <- meta_corr[order(rownames(meta_corr)), order(colnames(meta_corr))]
+p_vals_adj <- p_vals_adj[order(rownames(p_vals_adj)), order(colnames(p_vals_adj))]
+
+
+corr_plot=corrplot(meta_corr,p.mat=p_vals_adj, type = 'lower', order = 'FPC', tl.col = 'black',
+         cl.ratio = 0.2, tl.srt = 45)
+
+#PNG & PDF Save
+ggsave(
+  filename = here("plots/Q1_physical_analysis/corr_plot_p_adj.png"),
+  plot = corr_plot,
+  width = 10,  # Width in inches
+  height = 8  # Height in inches
+)
+
+ggsave(
+  filename = here("plots/Q1_physical_analysis/corr_plot_p_adj.pdf"),
+  plot = corr_plot,
+  width = 10,  # Width in inches
+  height = 8  # Height in inches
+)
 
 

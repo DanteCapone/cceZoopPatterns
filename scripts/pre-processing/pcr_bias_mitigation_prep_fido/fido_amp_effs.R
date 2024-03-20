@@ -316,7 +316,7 @@ p_s3=plot(fit_s3, par="Lambda", focus.cov="cycle_num")+
   theme(axis.title.x = element_text(size = 14),  # Increase x-axis label size
         axis.text.x = element_text(size = 14),    # Increase x-axis tick label size
         axis.text.y = element_text(size = 14))    # Increase y-axis tick label size
-p_s3
+p_s3+scale_color_brewer("Set2")
 
 #Plot all 
 # Combine legends

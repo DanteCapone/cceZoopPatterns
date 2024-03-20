@@ -151,30 +151,17 @@ write.csv(taxcoi_genus,here("data/phyloseq_bio_data/COI/fido_coi_genus_tax_table
 
 
 
-##MPN: Why not just use phyloseq?
-#Set ECDF threshold
-thresh_val=0.9
-
-
-#9/26/2023
-#ECDF plot for determining criteria 
-
-#90% threshold
-#S1
-
-## MPN: Do you want to agglomerate the taxa at say the genus level? If so, should do before filtering.
-##MPN: to use the ecdf method, we want to look at the plot. Is this where you came up with the 90% threshold?
-##MPN: also might want to 
+#Visualize ECDF
 fido_coi_s1_genus_otu[,-c(1:10)] %>% rowSums() %>% ecdf() %>% plot() %>% abline(v=1637)
-###end of added code
 
+#Add rowsums
 fido_coi_s1_genus_otu=fido_coi_s1_genus_otu %>% mutate(rowsum = rowSums(.[, 10:ncol(.)]))
 threshold <- quantile(fido_coi_s1_genus_otu$rowsum, thresh_val)
 
 # Separate rows based on threshold
 ##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
-above_threshold <- fido_coi_s1_genus_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
-below_threshold_sum <- fido_coi_s1_genus_otu %>%
+fido_taxa_filt <- fido_coi_s1_genus_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
+other <- fido_coi_s1_genus_otu %>%
   anti_join(fido_coi_s1_genus_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
   summarise_all(sum) %>% 
@@ -183,7 +170,7 @@ below_threshold_sum <- fido_coi_s1_genus_otu %>%
 
 
 # Combine data
-fido_coi_s1_final <- bind_rows(above_threshold, below_threshold_sum)
+fido_coi_s1_final <- bind_rows(fido_taxa_filt, other)
 
 
 # Remove the identified rows (excluding 'other')
@@ -227,8 +214,8 @@ threshold <- quantile(fido_coi_s2_genus_otu$rowsum, thresh_val)
 
 # Separate rows based on threshold
 ##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
-above_threshold <- fido_coi_s2_genus_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
-below_threshold_sum <- fido_coi_s2_genus_otu %>%
+fido_taxa_filt <- fido_coi_s2_genus_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
+other <- fido_coi_s2_genus_otu %>%
   anti_join(fido_coi_s2_genus_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
   summarise_all(sum) %>% 
@@ -237,7 +224,7 @@ below_threshold_sum <- fido_coi_s2_genus_otu %>%
 
 
 # Combine data
-fido_coi_s2_final <- bind_rows(above_threshold, below_threshold_sum)
+fido_coi_s2_final <- bind_rows(fido_taxa_filt, other)
 
 
 # Remove the identified rows (excluding 'other')
@@ -282,8 +269,8 @@ threshold <- quantile(fido_coi_s3_genus_otu$rowsum, thresh_val)
 
 # Separate rows based on threshold
 ##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
-above_threshold <- fido_coi_s3_genus_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
-below_threshold_sum <- fido_coi_s3_genus_otu %>%
+fido_taxa_filt <- fido_coi_s3_genus_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
+other <- fido_coi_s3_genus_otu %>%
   anti_join(fido_coi_s3_genus_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
   summarise_all(sum) %>% 
@@ -292,7 +279,7 @@ below_threshold_sum <- fido_coi_s3_genus_otu %>%
 
 
 # Combine data
-fido_coi_s3_final <- bind_rows(above_threshold, below_threshold_sum)
+fido_coi_s3_final <- bind_rows(fido_taxa_filt, other)
 
 
 

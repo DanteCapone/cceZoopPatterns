@@ -32,7 +32,12 @@ taxa_18s=read.csv(here("data/past/metazoopruned18s_tax.csv"))%>%
   ungroup() %>%
   column_to_rownames("Hash")
 
-# 2) Merging and manipulation (updated 8/24/2023 to create a new 18S input for fido where
+#BlAST
+taxa_18s=read.csv(here("data/raw_data/BLAST_taxa_class/zhang_taxa.csv")) %>% 
+  distinct(Hash, .keep_all = TRUE)%>% column_to_rownames("Hash")
+
+
+filter# 2) Merging and manipulation (updated 8/24/2023 to create a new 18S input for fido where
 # I don't average technical replicates)
 
 #Format Long
@@ -176,9 +181,8 @@ write.csv(tax18s_family,here("data/phyloseq_bio_data/18S/fido_18s_family_tax_tab
 
 ## ==== S1 ====
 # Separate rows based appearance in the calibration samples
-##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
-above_threshold <- fido_18s_s1_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
-below_threshold_sum <- fido_18s_s1_family_otu %>%
+fido_taxa_filt <- fido_18s_s1_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
+other <- fido_18s_s1_family_otu %>%
   anti_join(fido_18s_s1_family_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
   summarise_all(sum) %>% 
@@ -186,7 +190,7 @@ below_threshold_sum <- fido_18s_s1_family_otu %>%
   column_to_rownames("rowname")
 
 # Combine data
-fido_18s_s1_final <- bind_rows(above_threshold, below_threshold_sum)
+fido_18s_s1_final <- bind_rows(fido_taxa_filt, other)
 
 #Join with taxa file
 fido_18s_s1_final %>%
@@ -204,8 +208,8 @@ write.csv(fido_18s_s1_save_family_phy,here("data/fido/phy/fido_18s_s1_ecdf_famil
 ## ==== s2 ====
 # Separate rows based appearance in the calibration samples
 ##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
-above_threshold <- fido_18s_s2_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
-below_threshold_sum <- fido_18s_s2_family_otu %>%
+fido_taxa_filt <- fido_18s_s2_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
+other <- fido_18s_s2_family_otu %>%
   anti_join(fido_18s_s2_family_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
   summarise_all(sum) %>% 
@@ -213,7 +217,7 @@ below_threshold_sum <- fido_18s_s2_family_otu %>%
   column_to_rownames("rowname")
 
 # Combine data
-fido_18s_s2_final <- bind_rows(above_threshold, below_threshold_sum)
+fido_18s_s2_final <- bind_rows(fido_taxa_filt, other)
 
 #Join with taxa file
 fido_18s_s2_final %>%
@@ -233,8 +237,8 @@ write.csv(fido_18s_s2_save_family_phy,here("data/fido/phy/fido_18s_s2_ecdf_famil
 ## ==== s3 ====
 # Separate rows based appearance in the calibration samples
 ##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
-above_threshold <- fido_18s_s3_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
-below_threshold_sum <- fido_18s_s3_family_otu %>%
+fido_taxa_filt <- fido_18s_s3_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
+other <- fido_18s_s3_family_otu %>%
   anti_join(fido_18s_s3_family_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
   summarise_all(sum) %>% 
@@ -242,7 +246,7 @@ below_threshold_sum <- fido_18s_s3_family_otu %>%
   column_to_rownames("rowname")
 
 # Combine data
-fido_18s_s3_final <- bind_rows(above_threshold, below_threshold_sum)
+fido_18s_s3_final <- bind_rows(fido_taxa_filt, other)
 
 #Join with taxa file
 fido_18s_s3_final %>%
