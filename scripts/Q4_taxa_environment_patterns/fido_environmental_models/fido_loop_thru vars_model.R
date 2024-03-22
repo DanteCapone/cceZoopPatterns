@@ -11,6 +11,8 @@ library(here)
 
 here()
 #coi read in different sizes
+
+#Using agglomerated taxa from fido
 otucoi1=read.csv(here("data/fido/phy/fido_coi_s1_ecdf_taxa_phy.csv")) %>%
   select(starts_with("C"),-X,Genus)%>%
   pivot_longer(-Genus, names_to = "sample", values_to = "value") %>%
@@ -65,7 +67,6 @@ dat_3=phyloseq(otucoi3,coi_taxa,metacoi)%>% merge_samples(.,"Sample_ID_short",fu
 
 data_list <- list(dat_1=dat_1, dat_2=dat_2, dat_3=dat_3)
 
-
 set.seed(899)
 
 
@@ -78,7 +79,7 @@ set.seed(899)
 
 counter=0
 for (dat_name in names(data_list)) {
-
+  
   #Counter
   counter=counter+1
   print(counter)
@@ -217,6 +218,69 @@ if (saving==1) {
     width = 16,  # Width in inches
     height = 6  # Height in inches
   )}
+
+### =========Using all taxa agglomerated at family===========
+#COI reads
+leray_metazoo_otucoi=read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
+  column_to_rownames("Hash")%>%
+  select(where(~ !is.na(.[[1]])))
+
+leray_metazoo_meta=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv"))%>%
+  column_to_rownames("Sample_ID_dot") %>%
+  dplyr::select(-X)
+leray_metazoo_taxa=read.csv(here("data/phyloseq_bio_data/COI/coi_taxa_table_eDNA_metazoogene.csv")) %>% column_to_rownames("X")
+
+
+#Convert to phyloseq
+
+OTU = otu_table(as.matrix(leray_metazoo_otucoi), taxa_are_rows = TRUE)
+TAX = tax_table(as.matrix(leray_metazoo_taxa))
+meta=sample_data(leray_metazoo_meta)
+Phy_merged_coi <- phyloseq(OTU, TAX, meta) %>% tax_glom(.,"Genus")
+
+dat=Phy_merged_coi
+sample_dat <- as.data.frame(as(sample_data(dat),"matrix")) %>% 
+  select(c(-Sample_ID_short,-oxy_sat,-nitracline_depth,-mixedlayerdepths,-chl_max_depth,
+           -hypoxia_depth,-beam_depth,-chl_max,-intergrated_chl,-distance_from_shore,-PAR_1_depth_adj,-day_night_0_1,-density2))
+
+
+formula_string <- paste("~", paste(names(sample_dat), collapse = " + "), sep = "")
+formula_obj <- as.formula(formula_string)
+X <- t(model.matrix(~PC1, data=sample_dat))
+Y <- otu_table(dat) %>% t(.)
+
+
+## This is all prior specification
+upsilon <- ntaxa(dat)+3 
+Omega <- diag(ntaxa(dat))
+G <- cbind(diag(ntaxa(dat)-1), -1)
+Xi <- (upsilon-ntaxa(dat))*G%*%Omega%*%t(G)
+Theta <- matrix(0, ntaxa(dat)-1, nrow(X))
+Gamma <- diag(nrow(X))
+
+##This code is used to check priors, not for actual model fitting.
+priors <- pibble(NULL, X, upsilon, Theta, Gamma, Xi)  
+print(priors)
+
+priors <- to_clr(priors)  
+summary(priors, pars="Lambda", gather_prob=TRUE, as_factor=TRUE, use_names=TRUE)  
+
+names_covariates(priors) <- rownames(X)
+priors$Y <- Y # remember pibblefit objects are just lists
+posterior <- refit(priors, optim_method="lbfgs", jitter = 1e-5)
+
+tax <- tax_table(dat)[,c("Genus")] %>% as.data.frame() %>%
+  rownames_to_column("Genus2")%>% select(Genus)
+num <- 1:nrow(tax)
+tax <- unname(apply(tax, 1, paste, collapse="_"))
+tax <- paste(tax,sep="_")
+names_categories(posterior) <- tax
+
+##This is the "now what?" part. We have our model, what does it tell us?
+posterior_summary <- summary(posterior, pars="Lambda")$Lambda
+
+##Let's examine this more
+head(posterior_summary)
 
 
 
