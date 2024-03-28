@@ -93,18 +93,22 @@ c5_c7=c("CT1.T6.H33_S2",
 
 # ,Read in the data
 # ,Run 1 (Non pooled data)
-asvcoi_run1=read.csv(here("data","fido","ASV_table_coi_run1.csv")) %>% 
-  dplyr::select(-X)
+asvcoi_run1=read.csv(here("data","fido","ASV_table_coi_run1.csv")) %>%
+  select(-X) 
 
 
 # ,Run2
-asvcoi_run2=read.csv(here("data","fido","ASV_table_coi_run2.csv"))%>% 
-  dplyr::select(-X)
+asvcoi_run2=read.csv(here("data","fido","ASV_table_coi_run2.csv"))%>%
+  select(-X) 
 
 
 # ,Taxa Tables 
 taxa_coi=read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_tax.csv")) %>%
-  column_to_rownames("Hash")
+  column_to_rownames("Hash")%>% 
+  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
+  mutate(Genus = if_else(Genus=="Genus",Family, Genus )) %>% 
+  mutate(Species = if_else(is.na(Species),Genus, Species )) %>%
+  mutate(Species = if_else(Species=="Species",Genus, Species )) 
 
 
 
@@ -171,11 +175,19 @@ fido_coi_s3_otu_a1_a3=fido_coi_s3_a1_a3 %>%
   otu_table(taxa_are_rows = TRUE)
 
 #taxa table
-taxcoi_s1_a1_a3 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s1_otu_a1_a3))
+taxcoi_s1_a1_a3 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s1_otu_a1_a3)) %>% 
+  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
+  mutate(Genus = if_else(Genus=="Genus",Family, Genus )) %>% 
+  mutate(Species = if_else(is.na(Species),Genus, Species )) %>%
+  mutate(Species = if_else(Species=="Species",Genus, Species )) 
 taxcoi_s1_a1_a3 =  tax_table(as.matrix(taxcoi_s1_a1_a3))
 
 #S2
-taxcoi_s2_a1_a3 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s2_otu_a1_a3))
+taxcoi_s2_a1_a3 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s2_otu_a1_a3))%>% 
+  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
+  mutate(Genus = if_else(Genus=="Genus",Family, Genus )) %>% 
+  mutate(Species = if_else(is.na(Species),Genus, Species )) %>%
+  mutate(Species = if_else(Species=="Species",Genus, Species ))
 taxcoi_s2_a1_a3 =  tax_table(as.matrix(taxcoi_s2_a1_a3))
 #S3
 taxcoi_s3_a1_a3 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s3_otu_a1_a3))
@@ -198,7 +210,7 @@ fido_coi_s3_phy_a1_a3=phyloseq(fido_coi_s3_otu_a1_a3,taxcoi_s3_a1_a3)
 #Agglomerate at the genus level
 
 #S1
-fido_coi_s1_phy_a1_a3=phyloseq(fido_coi_s1_otu_a1_a3,taxcoi_s1_a1_a3, metadata)
+fido_coi_s1_phy_a1_a3=phyloseq(fido_coi_s1_otu_a1_a3,taxcoi_s1_a1_a3, metadata) 
 fido_coi_s1_genus_a1_a3=tax_glom(fido_coi_s1_phy_a1_a3, taxrank = "Genus")
 
 #Make inputs for filtering
@@ -431,14 +443,28 @@ fido_coi_s3_otu_b3_b5=fido_coi_s3_b3_b5 %>%
   otu_table(taxa_are_rows = TRUE)
 
 #taxa table
-taxcoi_s1_b3_b5 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s1_otu_b3_b5))
+taxcoi_s1_b3_b5 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s1_otu_b3_b5))%>% 
+  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
+  mutate(Genus = if_else(Genus=="Genus",Family, Genus )) %>% 
+  mutate(Species = if_else(is.na(Species),Genus, Species )) %>%
+  mutate(Species = if_else(Species=="Species",Genus, Species ))
 taxcoi_s1_b3_b5 =  tax_table(as.matrix(taxcoi_s1_b3_b5))
 
 #S2
-taxcoi_s2_b3_b5 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s2_otu_b3_b5))
-taxcoi_s2_b3_b5 =  tax_table(as.matrix(taxcoi_s2_b3_b5))
+taxcoi_s2_b3_b5 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s2_otu_b3_b5))%>% 
+  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
+  mutate(Genus = if_else(Genus=="Genus",Family, Genus )) %>% 
+  mutate(Species = if_else(is.na(Species),Genus, Species )) %>%
+  mutate(Species = if_else(Species=="Species",Genus, Species ))
+
+taxcoi_s2_b3_b5 =  tax_table(as.matrix(taxcoi_s2_b3_b5)) 
+  
 #S3
-taxcoi_s3_b3_b5 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s3_otu_b3_b5))
+taxcoi_s3_b3_b5 = taxa_coi %>% filter(rownames(taxa_coi) %in% rownames(fido_coi_s3_otu_b3_b5))%>% 
+  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
+  mutate(Genus = if_else(Genus=="Genus",Family, Genus )) %>% 
+  mutate(Species = if_else(is.na(Species),Genus, Species )) %>%
+  mutate(Species = if_else(Species=="Species",Genus, Species )) 
 taxcoi_s3_b3_b5 =  tax_table(as.matrix(taxcoi_s3_b3_b5))
 
 #Metadata
@@ -525,21 +551,6 @@ fido_coi_s1_final_b3_b5 %>%
   rownames_to_column("Hash")%>%
   #Add taxa hash
   left_join(taxa_coi %>% rownames_to_column("Hash"), by="Hash")%>%
-  #Fill in if spp is missing
-  mutate(Order = if_else(is.na(Order), Class, Order)) %>%
-  mutate(Order = if_else(Order=="", Class, Order)) %>%
-  
-  
-  mutate(Family = if_else(is.na(Family), Order, Family)) %>%
-  mutate(Family = if_else(Family=="", Order, Family)) %>%
-  
-  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
-  mutate(Genus = if_else(Genus=="",Family, Genus )) %>%
-  
-  mutate(Species = if_else(is.na(Species), Genus, Species))%>%
-  mutate(Species = if_else(Species== "", Genus, Species)) %>%
-  mutate(spp_hash=paste0(Species,".",Hash)) %>%
-  #Uncomment to save spp_hash
   select(-rowsum,-Phylum,-Class,-Family,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash,-spp_hash)->fido_coi_s1_save_taxa_phy_b3_b5
 
 #Hash
@@ -581,21 +592,7 @@ fido_coi_s2_final_b3_b5 %>%
   #Add taxa hash
   left_join(taxa_coi %>% rownames_to_column("Hash"), by="Hash")%>%
   #Fill in if spp is missing
-  mutate(Order = if_else(is.na(Order), Class, Order)) %>%
-  mutate(Order = if_else(Order=="", Class, Order)) %>%
-  
-  
-  mutate(Family = if_else(is.na(Family), Order, Family)) %>%
-  mutate(Family = if_else(Family=="", Order, Family)) %>%
-  
-  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
-  mutate(Genus = if_else(Genus=="",Family, Genus )) %>%
-  
-  mutate(Species = if_else(is.na(Species), Genus, Species))%>%
-  mutate(Species = if_else(Species== "", Genus, Species)) %>%
-  mutate(spp_hash=paste0(Species,".",Hash)) %>%
-  #Uncomment to save spp_hash
-  select(-rowsum,-Phylum,-Class,-Family,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash,-spp_hash)->fido_coi_s2_save_taxa_phy_b3_b5
+  select(-rowsum,-Phylum,-Class,-Family,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash)->fido_coi_s2_save_taxa_phy_b3_b5
 
 #Hash
 # select(-rowsum,-Phylum,-Class,-Family,-Genus,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-spp_hash)->fido_coi_s2_save_hash_phy
@@ -634,27 +631,7 @@ fido_coi_s3_final_b3_b5 <- bind_rows(fido_taxa_sel_b3_b5, other)
 # Remove the identified rows (excluding 'other')
 fido_coi_s3_final_b3_b5 %>%
   rownames_to_column("Hash")%>%
-  #Add taxa hash
-  left_join(taxa_coi %>% rownames_to_column("Hash"), by="Hash")%>%
-  #Fill in if spp is missing
-  mutate(Order = if_else(is.na(Order), Class, Order)) %>%
-  mutate(Order = if_else(Order=="", Class, Order)) %>%
-  
-  
-  mutate(Family = if_else(is.na(Family), Order, Family)) %>%
-  mutate(Family = if_else(Family=="", Order, Family)) %>%
-  
-  mutate(Genus = if_else(is.na(Genus),Family, Genus )) %>%
-  mutate(Genus = if_else(Genus=="",Family, Genus )) %>%
-  
-  mutate(Species = if_else(is.na(Species), Genus, Species))%>%
-  mutate(Species = if_else(Species== "", Genus, Species)) %>%
-  mutate(spp_hash=paste0(Species,".",Hash)) %>%
-  #Uncomment to save spp_hash
-  select(-rowsum,-Phylum,-Class,-Family,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash,-spp_hash)->fido_coi_s3_save_taxa_phy_b3_b5
-
-#Hash
-# select(-rowsum,-Phylum,-Class,-Family,-Genus,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-spp_hash)->fido_coi_s3_save_hash_phy
+  select(-rowsum,-Phylum,-Class,-Family,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash)->fido_coi_s3_save_taxa_phy_b3_b5
 
 #Save
 write.csv(fido_coi_s3_save_taxa_phy_b3_b5,here("data/fido/phy/sub_pools/fido_coi_s3_ecdf_taxa_phy_b3_b5.csv"))

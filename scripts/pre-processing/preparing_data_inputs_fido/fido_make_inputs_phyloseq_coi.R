@@ -210,7 +210,6 @@ fido_coi_s2_genus_otu[,-c(1:10)] %>% rowSums() %>% ecdf() %>% plot() %>% abline(
 ###end of added code
 
 fido_coi_s2_genus_otu=fido_coi_s2_genus_otu %>% mutate(rowsum = rowSums(.[, 10:ncol(.)]))
-threshold <- quantile(fido_coi_s2_genus_otu$rowsum, thresh_val)
 
 # Separate rows based on threshold
 ##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
@@ -265,7 +264,6 @@ fido_coi_s3_genus_otu[,-c(1:10)] %>% rowSums() %>% ecdf() %>% plot() %>% abline(
 ###end of added code
 
 fido_coi_s3_genus_otu=fido_coi_s3_genus_otu %>% mutate(rowsum = rowSums(.[, 10:ncol(.)]))
-threshold <- quantile(fido_coi_s3_genus_otu$rowsum, thresh_val)
 
 # Separate rows based on threshold
 ##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
@@ -311,3 +309,4 @@ fido_coi_s3_final %>%
 #Save
 write.csv(fido_coi_s3_save_taxa_phy,here("data/fido/phy/fido_coi_s3_ecdf_taxa_phy.csv"))
 write.csv(fido_coi_s3_save_hash_phy,here("data/fido/phy/fido_coi_s3_ecdf_hash_phy.csv"))
+

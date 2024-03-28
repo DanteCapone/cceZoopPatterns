@@ -1,11 +1,23 @@
 #Zooscan analysis final
-librarian::shelf(tidyverse, googledrive, stringr,here,gridextra)
+librarian::shelf(tidyverse, googledrive, stringr,here,vegan)
 here()
 source(here("scripts/Zooscan_analysis/zooscan_functions.R"))
-
+source("scripts/helpful_functions/phyloseq_mapping_funs.R")
+source("scripts/helpful_functions/general_helper_functions.R")
 
 
 #Load in the data
+##Lat and lon are funky so add back in from metadata
+metadata=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.2.2023_for_map.csv"))%>%
+  mutate(sample_id = tolower(str_replace_all(Sample_ID_short, "-", "_"))) %>%
+  # Standardize key columns (some samples are incorerctly notated to compare with Zooscan)
+  mutate(sample_id = tolower(str_replace_all(Sample_ID_short, "-", "_"))) %>%
+  select(-X,-Sample_ID_dot, -Sizefractionmm) %>%
+  distinct(.) %>%
+  #Make PC1 values opposite for plotting
+  mutate(PC1=PC1*-1)
+
+
 # List all .tsv files in the folder
 tsv_files <- list.files(here("data/Zooscan/"), pattern = "\\.tsv$", full.names = TRUE)
 
@@ -24,7 +36,44 @@ zooscan_processed=readEcotaxa(zooscan_exp)%>%
          sample_id = ifelse(sample_id == "c2_t1_h36", "ct2_t1_h36", sample_id),
          sample_id = ifelse(sample_id == "ct1_t8_h10", "c1_t8_h10", sample_id),
          sample_id = ifelse(sample_id == "ct2_t9_h19", "c2_t9_h19", sample_id),
-         sample_id = ifelse(sample_id == "c3_bt6_h25", "c3_t6_h25", sample_id)) 
+         sample_id = ifelse(sample_id == "c3_bt6_h25", "c3_t6_h25", sample_id)) %>%
+  #Need to fix hyperiids
+  filter(!(object_annotation_category %in% c("Hyperiidea","part<Crustacea","darksphere", "multiple organisms","head<Chaetognatha",
+                                             "egg<Actinopterygii")))
+
+# Compute Shannon Diversity Index by site
+# Count the number of individuals for each taxa within each site
+count_data <- zooscan_processed %>%
+  group_by(sample_id,object_annotation_category,size_fraction) %>%
+  summarise(count = n())
+
+# Compute Shannon Diversity Index by site
+shannon_index <- count_data %>%
+  group_by(sample_id,size_fraction) %>%
+  summarise(shannon_index = diversity(count, index = "shannon"))
+
+shannon_index_plot=shannon_index%>%
+  left_join(metadata, by="sample_id") %>%
+  #Make size class a factor
+  mutate(size_fraction=factor(size_fraction, levels = c("0.2-0.5", "0.5-1", "1-2", ">2"))) %>% 
+  distinct(.) 
+
+
+#Shannon Index Plot
+my_palette=custom_pallete()
+shannon_index_plot %>%
+  ggplot(aes(x = PC1, y = shannon_index, color = as.factor(size_fraction))) +
+  geom_point(size=8, aes(shape=cycle, fill=cycle))+
+  scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
+  scale_x_continuous(breaks = seq(-6, 7, by = 2))+
+  scale_fill_manual(values = my_palette) +
+  facet_wrap(~size_fraction, nrow=4)+
+  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI") +
+  scale_color_discrete(name = "Cycle") +  # Adjust color legend label
+  stat_cor(method="pearson", label.x = 4, label.y = 3.5)+
+  theme_classic()
+
 
 
 #Calculate C-biomass
@@ -32,9 +81,7 @@ zooscan_processed=readEcotaxa(zooscan_exp)%>%
    transform_by_taxa_group(.,"esd") %>%
    mutate(dryweight_C_mg=dryweight_C_ug/1000) %>%
    #Add log biomass, and biomass/m2
-   mutate(log10_dryweight_C_mg=log10(dryweight_C_mg))%>%
-   #Need to fix hyperiids
-   filter(object_annotation_category!="Hyperiidea")->zooscan_biomass 
+   mutate(log10_dryweight_C_mg=log10(dryweight_C_mg))->zooscan_biomass 
 
 #Biomass histogram
  zooscan_biomass %>% 
@@ -54,15 +101,7 @@ relative_abundances=zooscan_processed %>%
 
 
 
-##Lat and lon are funky so add back in from metadata
-metadata=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.2.2023_for_map.csv"))%>%
-  mutate(sample_id = tolower(str_replace_all(Sample_ID_short, "-", "_"))) %>%
-# Standardize key columns (some samples are incorerctly notated to compare with Zooscan)
-  mutate(sample_id = tolower(str_replace_all(Sample_ID_short, "-", "_"))) %>%
-  select(-X,-Sample_ID_dot, -Sizefractionmm,-max_size) %>%
-  distinct(.) %>%
-  #Make PC1 values opposite for plotting
-  mutate(PC1=PC1*-1)
+
 
 # Merge dataframes: add metadata to relative abudance data
 relative_abundances_map <- relative_abundances %>%
@@ -104,9 +143,9 @@ zoop_calanoid_by_sample = zooscan_by_sample %>%
 zoop_calanoid_by_sample_relative_abundance = relative_abundances_map %>%
   filter(object_annotation_category=="Calanoida")
 
-#Save
+#Save Biomass and relative abundances
 write.csv(zoop_calanoid_by_sample,here("data/Zooscan/zoop_calanoid_by_sample_biomass.csv"))
-write.csv(zoop_calanoid_by_sample_relative_abundance,here("data/Zooscan/zoop_calanoid_by_sample_relative_abundance.csv"))
+write.csv(relative_abundances_map,here("data/Zooscan/zoop_relative_abundance.csv"))
 write.csv(zooscan_by_sample,here("data/Zooscan/zooscan_by_sample_biomass.csv"))
 
 

@@ -1,5 +1,11 @@
 #Plot PCR-Bias mitigated data as a function of PC1
-librarian::shelf(tidyverse, googledrive, stringr,here,gridextra,phyloseq,
+
+
+
+# Libraries, Data, Functions, Etc -----------------------------------------
+
+
+librarian::shelf(tidyverse, googledrive, stringr,here,phyloseq,
                  extrafont, RColorBrewer)
 
 
@@ -9,6 +15,8 @@ source(("scripts/helpful_functions/treemap_funs_Capone.R"))
 source("scripts/helpful_functions/phyloseq_mapping_funs.R")
 source("scripts/helpful_functions/general_helper_functions.R")
 
+#Switches
+saving=0
 
 #Metadata
 ##Lat and lon are funky so add back in from metadata
@@ -26,10 +34,10 @@ depths=read.csv(here("data/physical_environmental_data/sample_depths.csv")) %>%
 
 
 #Volume filtered (add to metadata)
-volume_filtered=read.csv(here("data/biomass/p2107_bt_volume_filtered.csv"))
+volume_filtered=read.csv(here("data/raw_data/biomass/p2107_bt_volume_filtered.csv"))
 
 #Dryweights
-dryweights=read.csv("data/biomass/dryweights_forzoopmetab.csv")
+dryweights=read.csv("data/raw_data/biomass/dryweights_forzoopmetab.csv")
 
 env_metadata=metadata %>% left_join(.,volume_filtered, by="Sample_ID_short") %>%
   left_join(.,dryweights, by = c("Sample_ID_short","max_size"))%>% 
@@ -40,16 +48,19 @@ env_metadata=metadata %>% left_join(.,volume_filtered, by="Sample_ID_short") %>%
   mutate(Sample_ID=Sample_ID.x)
 
 #Predicted proportions
-fido_s1=read.csv(here("data/predicted_og/predicted_og_coi_02_21_2024_s1.csv")) %>%
+fido_s1=read.csv(here("data/predicted_og/predicted_og_coi_02_26_2024_s1_phy.csv")) %>%
   select(-X)
-fido_s2=read.csv(here("data/predicted_og/predicted_og_coi_02_21_2024_s2_phy.csv")) %>%
+fido_s2=read.csv(here("data/predicted_og/predicted_og_coi_02_26_2024_s2_phy.csv")) %>%
   select(-X)
-fido_s3=read.csv(here("data/predicted_og/predicted_og_coi_02_21_2024_s3_phy.csv")) %>%
+fido_s3=read.csv(here("data/predicted_og/predicted_og_coi_02_26_2024_s3_phy.csv")) %>%
   select(-X)
 
 final_data_all_sizes=rbind(fido_s1,fido_s2,fido_s3) %>%
   mutate(Sample_ID = str_extract(replicate, "(?<=predicted )\\S+")) 
 
+
+
+# Part 1: All Taxa Patterns  ----------------------------------------------------------------
 
 
 ### PART 1: All taxa analysis 
@@ -114,7 +125,7 @@ palette_name <- ifelse(num_taxa <= 8, "Set2", "Set3")  # Example choice, you can
 color_palette <- brewer.pal(n = num_taxa, name = palette_name)
 
 
-labels_for_map=calanoida %>% 
+labels_for_map=phy_taxa_pcr %>% 
   ungroup()%>%
   select(Sample_ID_short,PC1) %>%
   unique(.) %>%
@@ -143,7 +154,7 @@ phy_taxa_pcr %>%
   scale_fill_manual(values = color_palette)->phy_pcr_props_plot_spp
 phy_pcr_props_plot_spp
 
-saving=1
+ 
 if (saving==1) {
   ggsave(
     filename = here("plots/methods_comparison/PCR_genus_props_coi_bar.pdf"), 
@@ -189,7 +200,7 @@ phy_taxa_pcr %>%
 
 phy_pcr_biomass_plot
 
-saving=0
+
 if (saving==1) {
   ggsave(
     filename = here("plots/methods_comparison/PCR_all_biomass_scaled_all_sites_coi.pdf"), 
@@ -198,6 +209,8 @@ if (saving==1) {
     height = 6  # Height in inches
   ) }
 #
+
+
 
 
 #By taxa
@@ -238,6 +251,9 @@ if (saving==1) {
   ) }
 
 
+
+
+# Raw Reads ---------------------------------------------------------------
 
 
 ## === RAW READS: Repeat Analysis with raw/normalized reads === ##
@@ -343,7 +359,7 @@ phy_coi %>%
   scale_fill_manual(values = color_palette)->phy_nreads_props_plot_spp
 phy_nreads_props_plot_spp
 
-saving=1
+ 
 if (saving==1) {
   ggsave(
     filename = here("plots/methods_comparison/raw_genus_props_coi_bar.pdf"), 
@@ -397,7 +413,7 @@ if (saving==1) {
 
 
 
-### ============== PART 2: Calanoids ==============
+# Part 2: Calanoid Copepods -----------------------------------------------
 
 #Filter to calanoida
 calanoida_taxa_pcr=phy_taxa_pcr %>% mutate(Genus=taxa) %>%
@@ -418,7 +434,7 @@ palette_name <- ifelse(num_taxa <= 8, "Set1", "Set3")  # Example choice, you can
 color_palette <- brewer.pal(n = num_taxa, name = palette_name)
 
 
-labels_for_map=calanoida %>% 
+labels_for_map=calanoida_taxa_pcr %>% 
   ungroup()%>%
   select(Sample_ID_short,PC1) %>%
   unique(.) %>%
@@ -473,7 +489,7 @@ calanoida_taxa_pcr %>%
 calanoida_pcr_props_plot_spp
 
 
-saving=1
+ 
 if (saving==1) {
   ggsave(
     filename = here("plots/methods_comparison/PCR_calanoid_props_scaled_spp_coi.pdf"), 
@@ -493,6 +509,34 @@ if (saving==1) {
 
 
 #==== Biomass
+### Scatterplot biomass vs. pcr rel abundance
+# calanoida_taxa_pcr %>%
+#   group_by(Sample_ID) %>%
+#   summarize(
+#     n_reads = sum(n_reads),
+#     biomass_mg_m2 = sum(biomass_mg_m2),
+#     across(where(is.numeric), mean)) %>%
+#   ggplot(aes(x=(biomass_dry), y=biomass_mg_m2))+
+#   geom_point(aes( size=8,color=as.factor(size_fraction),fill=as.factor(size_fraction)))+
+#   scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
+#   scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
+#   # geom_smooth(method = "lm", fullrange=TRUE, se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
+#   labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "PCR Bias-Mitigated Relative Abundance (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
+#   ggtitle("Spearman Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance (COI)")+
+#   # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 0.1, label.y = 0.75)+
+#   stat_cor(method="spearman", label.x = 0.1, label.y = 0.9)+
+#   guides(size = FALSE, fill=FALSE) +
+#   # facet_wrap(~offshore_onshore, nrow=3)+
+#   # facet_wrap(~size_fraction, nrow=3)+
+#   # facet_wrap(~size_fraction, nrow=3)+
+#   # geom_abline(intercept = 0, slope = 1, color = "black", size = 1.5, alpha = 0.3) +  # Add 1-to-1 line with modifications
+#   theme_classic()+
+#   theme(axis.text.x = element_text(hjust = 1, size = 12),
+#         axis.text.y = element_text(size = 12),
+#         axis.title = element_text(size = 14),
+#         strip.text = element_text(size = 14))
+
+
 #By cycle
 calanoida_taxa_pcr %>%
   # filter(biomass_mg_m2 >0) %>%
@@ -613,7 +657,7 @@ calanoida_raw %>%
   scale_fill_manual(values = color_palette)->calanoida_nreads_props_plot_spp
 calanoida_nreads_props_plot_spp
 
-saving=1
+ 
 if (saving==1) {
   ggsave(
     filename = here("plots/methods_comparison/raw_reads_calanoida_props_spp_all_sites_coi.pdf"), 
@@ -695,6 +739,9 @@ if (saving==1) {
 
 
 
+# PCR vs Raw --------------------------------------------------------------
+
+
 
 ## =========Plot anomalies in relative abundances
 
@@ -744,6 +791,10 @@ if (saving==1) {
     height = 6  # Height in inches
   )}
 
+
+# Zooscan  ----------------------------------------------------------------
+
+
 #===== Zooscan comparison
 
 #Need to modify string category for joining
@@ -774,7 +825,7 @@ zooscan_relative=read.csv(here("data/Zooscan/zoop_calanoid_by_sample_relative_ab
   summarise(relative_abundance_zoo=sum(relative_abundance)) 
 
 ## ==== Biomass & Biomass proportions plots === #
-labels_for_map=biomass_map %>% 
+labels_for_map=zooscan_calanoid %>% 
   ungroup()%>%
   select(Sample_ID_short,PC1) %>%
   unique(.) %>%
@@ -798,34 +849,37 @@ zooscan_calanoid %>%
   scale_x_discrete(labels = labels_for_map$Sample_ID_short)->calanoid_biomass_prop_zooscan
 calanoid_biomass_prop_zooscan
 
-#Save
-ggsave(
-  filename = here("plots/methods_comparison/zooscan_calanoid_biomass_proportions.pdf"), 
-  plot = calanoid_biomass_zooscan,
-  width = 8,  # Width in inches
-  height = 6  # Height in inches
-)
+# #Save
+# ggsave(
+#   filename = here("plots/methods_comparison/zooscan_calanoid_biomass_proportions.pdf"), 
+#   plot = calanoid_biomass_zooscan,
+#   width = 8,  # Width in inches
+#   height = 6  # Height in inches
+# )
+# 
+# 
+# #Biomass
+# zooscan_calanoid %>%
+#   filter(size_fraction!=5) %>%
+#   ggplot(aes(x = as.factor(PC1), y = dryweight_C_mg_m2_taxa, fill = cycle)) +
+#   geom_bar(stat = "identity", width=0.8) +
+#   labs(title = "Calanoid Copepod Zooscan Biomass",
+#        x = "Offfshore \u2190 PC1 \u2192 Onshore",
+#        y = expression("Biomass (mg C " ~ m^-2 * ")"),
+#        fill = "Cycle") +
+#   facet_wrap(~size_fraction, nrow = 4, labeller = label_bquote(rows = .(c("0.2-0.5 mm", "0.5-1 mm", "1-2 mm",">2 mm"))), scales = "free_y") +
+#   theme_minimal()+
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+#         axis.text.y = element_text(size = 12),
+#         axis.title = element_text(size = 14),
+#         strip.text = element_text(size = 14))+
+#   scale_fill_manual(values = custom_palette) +
+#   scale_x_discrete(labels = labels_for_map$Sample_ID_short)->calanoid_biomass_zooscan
+# calanoid_biomass_zooscan
 
 
-#Biomass
-zooscan_calanoid %>%
-  filter(size_fraction!=5) %>%
-  ggplot(aes(x = as.factor(PC1), y = dryweight_C_mg_m2_taxa, fill = cycle)) +
-  geom_bar(stat = "identity", width=0.8) +
-  labs(title = "Calanoid Copepod Zooscan Biomass",
-       x = "Offfshore \u2190 PC1 \u2192 Onshore",
-       y = expression("Biomass (mg C " ~ m^-2 * ")"),
-       fill = "Cycle") +
-  facet_wrap(~size_fraction, nrow = 4, labeller = label_bquote(rows = .(c("0.2-0.5 mm", "0.5-1 mm", "1-2 mm",">2 mm"))), scales = "free_y") +
-  theme_minimal()+
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
-        axis.text.y = element_text(size = 12),
-        axis.title = element_text(size = 14),
-        strip.text = element_text(size = 14))+
-  scale_fill_manual(values = custom_palette) +
-  scale_x_discrete(labels = labels_for_map$Sample_ID_short)->calanoid_biomass_zooscan
-calanoid_biomass_zooscan
 
+# PCR vs Raw vs Zooscan ---------------------------------------------------
 
 
 
@@ -1007,57 +1061,62 @@ ggsave(
 )
 
 
+
+# Correlations ------------------------------------------------------------
+
 ## Correlation plot
 
 # Check distribution
 pcr_raw_zoo_coi %>%
-  ggplot(., aes(x = n_reads_pcr)) +   # Set the data and the variable to plot
-  geom_histogram(binwidth = 0.05, color = "black", fill = "lightblue", alpha = 0.6) +  # Create the histogram layer
+  ggplot(., aes(x = asin(sqrt(n_reads_pcr)))) +   # Set the data and the variable to plot
+  geom_histogram(binwidth = 0.1, color = "black", fill = "lightblue", alpha = 0.6) +  # Create the histogram layer
   labs(title = "Histogram of Random Normal Values", x = "Values", y = "Frequency")  # Add titles and labels
 
 pcr_raw_zoo_coi %>%
-  ggplot(., aes(x = n_reads_raw)) +   # Set the data and the variable to plot
-  geom_histogram(binwidth = 0.05, color = "black", fill = "lightblue", alpha = 0.6) +  # Create the histogram layer
+  ggplot(., aes(x = asin(sqrt(n_reads_raw)))) +   # Set the data and the variable to plot
+  geom_histogram(binwidth = 0.1, color = "black", fill = "lightblue", alpha = 0.6) +  # Create the histogram layer
   labs(title = "Histogram of Random Normal Values", x = "Values", y = "Frequency")  # Add titles and labels
 
 pcr_raw_zoo_coi %>%
-  ggplot(., aes(x = biomass_prop_taxa)) +   # Set the data and the variable to plot
+  ggplot(., aes(x = asin(sqrt(biomass_prop_taxa)))) +   # Set the data and the variable to plot
   geom_histogram(binwidth = 0.05, color = "black", fill = "lightblue", alpha = 0.6) +  # Create the histogram layer
   labs(title = "Histogram of Random Normal Values", x = "Values", y = "Frequency")  # Add titles and labels
 
 
 
-# Correlation
+# Correlations between Zoo-PB, PCR-RA and RRA -----------------------------
+
+#ADd clusters to df for plotting groups
+clusters=read.csv(here("data/physical_environmental_data/pca_clusters.csv")) %>%
+  select(-Sample_ID_dot) %>% unique()
+
+pcr_raw_zoo_coi=pcr_raw_zoo_coi %>%
+  left_join(.,clusters,by="PC1")
+
+
 custom_palette <- c("#5BA3D5", "#66CC66", "#FF4C38", "#FF8F66", "#A085D9")
 
-#Check outliers
-# Calculate quantiles
-quantiles <- quantile(pcr_raw_zoo_coi$biomass_prop_taxa, c(0.25, 0.75))
-IQR <- quantiles[2] - quantiles[1]
 
-# Define lower and upper bounds (e.g., using 1.5*IQR)
-lower_bound <- quantiles[1] - 1.5 * IQR
-upper_bound <- quantiles[2] + 1.5 * IQR
-pcr_raw_zoo_coi_outliers_rm=pcr_raw_zoo_coi
-  filter(biomass_prop_taxa >= lower_bound & biomass_prop_taxa <= upper_bound)
 
 
 #Zoo vs. pcr
-pcr_raw_zoo_coi_outliers_rm %>%
+pcr_raw_zoo_coi %>%
   filter(!is.na(cycle.y))%>%
   # filter(cycle.y=="1") %>%
   ggplot(.,aes(x=asin(sqrt(biomass_prop_taxa)), y=asin(sqrt(n_reads_pcr))))+
   geom_point(aes(shape=cycle.y, size=8,color=as.factor(size_fraction),fill=as.factor(size_fraction)))+
   scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
-  scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
-  scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
-  # geom_smooth(method = "lm", fullrange=TRUE, se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
-  labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "PCR Bias-Mitigated Relative Abundance (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
-  ggtitle("Spearman Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance (COI)")+
+  # scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
+  # scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
+  # geom_smooth(method = "lm", fullrange=TRUE, se = TRUE, formula = y ~ x, aes(group=offshore_onshore, color=offshore_onshore)) +  # Add linear regression line
+  labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "PCR Bias-Mitigated Relative Abundance\n (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
+  ggtitle("Pearson Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance (COI)")+
   # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 0.1, label.y = 0.75)+
-  stat_cor(method="spearman", label.x = 0.1, label.y = 0.9)+
+  stat_cor(method="pearson", label.x = 0.1, label.y = 0.9)+
   guides(size = FALSE, fill=FALSE) +
-  facet_wrap()
+  # facet_wrap(~offshore_onshore, nrow=3)+
+  # facet_wrap(~size_fraction, nrow=3)+
+  # facet_wrap(~size_fraction, nrow=3)+
   # geom_abline(intercept = 0, slope = 1, color = "black", size = 1.5, alpha = 0.3) +  # Add 1-to-1 line with modifications
   theme_classic()+
   scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +  # Set x limits and ticks
@@ -1068,14 +1127,19 @@ pcr_raw_zoo_coi_outliers_rm %>%
         strip.text = element_text(size = 14))->zoo_vs_pcr
 zoo_vs_pcr
 ggsave(
+  # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_coi_cluster.pdf"),
+  # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_coi_cycle.pdf"),
+  # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_coi_size.pdf"),
   filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_coi.pdf"),
-  # filename = here("plots/methods_comparison/grouped_bar_relative_abundance_diff_sig_diffs.pdf"), 
   plot = zoo_vs_pcr,
   width = 12,  # Width in inches
   height = 6  # Height in inches
 )
 
 ggsave(
+  # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_coi_cluster.png"),
+  # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_coi_cycle.png"),
+  # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_coi_size.png"),
   filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_coi.png"),
   plot = zoo_vs_pcr,
   width = 12,  # Width in inches
@@ -1084,7 +1148,7 @@ ggsave(
 
 
 #### ===== 
-pcr_raw_zoo_coi_outliers_rm %>%
+pcr_raw_zoo_coi %>%
   filter(!is.na(cycle.y))%>%
   # filter(cycle.y=="1") %>%
   ggplot(.,aes(x=asin(sqrt(biomass_prop_taxa)), y=asin(sqrt(n_reads_raw))))+
@@ -1093,11 +1157,14 @@ pcr_raw_zoo_coi_outliers_rm %>%
   scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   # geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x, fullrange=TRUE) +  # Add linear regression line
-  labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "Raw Read Relative Abundance (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
-  ggtitle("Regression Zooscan Biomass Proportion and Raw Read Relative Abundance (COI)")+
+  labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "Raw Read Relative Abundance\n (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
+  ggtitle("Pearson Correlation between Zooscan Biomass Proportion\n and Raw Read Relative Abundance (COI)")+
   # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 0.1, label.y = 0.9)+
-  stat_cor(method="spearman", label.x = 0.1, label.y = 0.9)+
+  stat_cor(method="pearson", label.x = 0.1, label.y = 0.9)+
   guides(size = FALSE, fill=FALSE) +
+  # facet_wrap(~offshore_onshore, nrow=3)+
+  # facet_wrap(~cycle.y, nrow=3)+
+  # facet_wrap(~size_fraction, nrow=3)+
   # geom_abline(intercept = 0, slope = 1, color = "black", size = 1.5, alpha = 0.3) +  # Add 1-to-1 line with modifications
   theme_classic()+
   scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +  # Set x limits and ticks
@@ -1108,14 +1175,20 @@ pcr_raw_zoo_coi_outliers_rm %>%
         strip.text = element_text(size = 14))->zoo_vs_raw
 zoo_vs_raw
 ggsave(
-  filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi.pdf"),
-  plot = zoo_vs_raw,
+  filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi_cluster.pdf"),
+  # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi_cycle.pdf"),
+  # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi_size.pdf"),
+  # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi.pdf"),
+    plot = zoo_vs_raw,
   width = 12,  # Width in inches
   height = 6  # Height in inches
 )
 
 ggsave(
-  filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi.png"),
+  filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi_cluster.png"),
+  # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi_cycle.png"),
+  # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi_size.png"),
+  # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi.png"),
   plot = zoo_vs_raw,
   width = 12,  # Width in inches
   height = 6  # Height in inches
@@ -1124,26 +1197,27 @@ ggsave(
 
 
 ### PCR vs Raw
-pcr_raw_zoo_coi_outliers_rm %>%
+pcr_raw_zoo_coi %>%
   filter(!is.na(cycle.y))%>%
   # filter(cycle.y=="1") %>%
-  ggplot(.,aes(x=n_reads_pcr, y=n_reads_raw))+
+  ggplot(.,aes(x=n_reads_raw, y=n_reads_pcr))+
   geom_point(aes(shape=cycle.y, size=8,color=as.factor(size_fraction),fill=as.factor(size_fraction)))+
   scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
   scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
-  geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
+  # geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
   labs(x = "PCR Bias-Mitigated Relative Abundance", y = "Raw Reads Relative Abundance", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
-  ggtitle("Spearman Correlation between PCR Bias-Mitigated and Raw Read Relative Abundance")+
-  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 0.1, label.y = 0.2)+
+  ggtitle("Pearson Correlation between PCR Bias-Mitigated and Raw Read Relative Abundance")+
+  stat_cor(method="pearson", label.x = 0.1, label.y = 0.9)+
   guides(size = FALSE, fill=FALSE) +
-  geom_abline(intercept = 0, slope = 1, color = "black", size = 1.5, alpha = 0.3) +  # Add 1-to-1 line with modifications
+  # geom_abline(intercept = 0, slope = 1, color = "black", size = 1.5, alpha = 0.3) +  # Add 1-to-1 line with modifications
   theme_classic()+
   theme(axis.text.x = element_text(hjust = 1, size = 12),
         axis.text.y = element_text(size = 12),
         axis.title = element_text(size = 14),
         strip.text = element_text(size = 14))->zoo_vs_raw
 zoo_vs_raw
+if (saving==1) {
 ggsave(
   filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_coi.pdf"),
   plot = zoo_vs_raw,
@@ -1156,10 +1230,93 @@ ggsave(
   plot = zoo_vs_raw,
   width = 12,  # Width in inches
   height = 6  # Height in inches
-)
+) }
+
+
+# ANCOVA ------------------------------------------------------------------
 
 
 
+## ANCOVA with groupings
+library(rstatix)
+
+# ANCOVA with one continuous covariate (e.g., n_reads_raw)
+
+
+#Raw vs. Zoo
+ancova_result_coi_raw <- pcr_raw_zoo_coi %>%
+  filter(!is.na(n_reads_raw))%>%
+  mutate(t1 = ifelse(cycle.y == "T1", cycle.y, "other")) %>%
+  lm(asin(sqrt(n_reads_raw)) ~ asin(sqrt(biomass_prop_taxa))+offshore_onshore, data = .)
+#Can remove offshore_onshore and interactions for cycle
+anova(ancova_result_coi_raw)
+# Diagnostic plots
+par(mfrow=c(2,2)) # Create a 2x2 layout for the plots
+plot(ancova_result) # Plot diagnostic plots
+
+
+
+#==PCR-RA vs. ZooPB ANCOVA
+ancova_result_coi_pcr <- pcr_raw_zoo_coi %>%
+  filter(!is.na(n_reads_raw))%>%
+  mutate(t1 = ifelse(cycle.y == "T1", cycle.y, "other")) %>%
+  lm(asin(sqrt(n_reads_pcr)) ~ asin(sqrt(biomass_prop_taxa))*size_fraction*t1+cycle.y, data = .)
+#Can remove offshore_onshore and interactions for cycle
+anova(ancova_result_coi_pcr)
+# Diagnostic plots
+par(mfrow=c(2,2)) # Create a 2x2 layout for the plots
+plot(ancova_result_coi_pcr) # Plot diagnostic plots
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### ====== RANDOM ANALYSES
+
+
+## Correlate biomasses
+pcr_raw_zoo_18s%>%
+  filter(dryweight_C_mg_sum_sample<20) %>% 
+  ggplot(aes(x=(biomass_mg_m2), y=dryweight_C_mg_sum_sample))+
+  geom_point(aes( size=8,color=as.factor(size_fraction),fill=as.factor(size_fraction)))+
+  scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
+  scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
+  geom_smooth(method = "lm", fullrange=TRUE, se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
+  ggtitle("Pearson Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance (COI)")+
+  # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 0.1, label.y = 0.75)+
+  stat_cor(method="pearson", label.x = 0.1, label.y = 0.9)+
+  guides(size = FALSE, fill=FALSE) +
+  # facet_wrap(~offshore_onshore, nrow=3)+
+  # facet_wrap(~size_fraction, nrow=3)+
+  # facet_wrap(~size_fraction, nrow=3)+
+  # geom_abline(intercept = 0, slope = 1, color = "black", size = 1.5, alpha = 0.3) +  # Add 1-to-1 line with modifications
+  theme_classic()+
+  theme(axis.text.x = element_text(hjust = 1, size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 14))
+
+
+
+
+
+###SCRAP
 #Patterns comparison
 ## Patterns for only where pcr-bias itigated is better
 pcr_raw_zoo_coi_long %>%
@@ -1210,7 +1367,7 @@ grouped_bar_all
 
 ### Finally correlate all with PC1
 
-pcr_raw_zoo_coi_outliers_rm %>%
+pcr_raw_zoo_coi %>%
   filter(!is.na(cycle.y))%>%
   # filter(cycle.y=="1") %>%
   ggplot(.,aes(x=PC1, y=biomass_prop_taxa))+
@@ -1221,8 +1378,8 @@ pcr_raw_zoo_coi_outliers_rm %>%
   scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   geom_smooth(method = "lm", fullrange=TRUE, se = TRUE, color = "black", formula = y ~ x)+  # Add linear regression line
   labs(x = "PC1", y = "PCR Bias-Mitigated Relative Abundance", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
-  ggtitle("Spearman Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance")+
-  stat_cor(method = "spearman", label.x = 0.1, label.y = 0.75)+
+  ggtitle("Pearson Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance")+
+  stat_cor(method = "pearson", label.x = 0.1, label.y = 0.75)+
   guides(size = FALSE, fill=FALSE) +
   theme_classic()+
   theme(axis.text.x = element_text(hjust = 1, size = 12),

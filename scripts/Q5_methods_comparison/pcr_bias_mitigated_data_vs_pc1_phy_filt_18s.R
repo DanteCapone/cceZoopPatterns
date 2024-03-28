@@ -397,6 +397,9 @@ if (saving==1) {
 
 
 
+
+# Part 2: Calanoid Copepods -----------------------------------------------
+
 ### ============== PART 2: Calanoids ==============
 
 #Filter to calanoida
@@ -418,7 +421,7 @@ palette_name <- ifelse(num_taxa <= 8, "Set1", "Set3")  # Example choice, you can
 color_palette <- brewer.pal(n = num_taxa, name = palette_name)
 
 
-labels_for_map=calanoida %>% 
+labels_for_map=calanoida_taxa_pcr %>% 
   ungroup()%>%
   select(Sample_ID_short,PC1) %>%
   unique(.) %>%
@@ -472,7 +475,7 @@ calanoida_taxa_pcr %>%
   scale_fill_manual(values = color_palette)->calanoida_pcr_props_plot_spp
 calanoida_pcr_props_plot_spp
 
-saving=1
+
 if (saving==1) {
   ggsave(
     filename = here("plots/methods_comparison/PCR_calanoid_props_scaled_spp_18s.pdf"), 
@@ -658,7 +661,7 @@ calanoida_raw %>%
   scale_fill_manual(values = color_palette)->calanoida_nreads_props_plot_spp
 calanoida_nreads_props_plot_spp
 
-saving=1
+
 if (saving==1) {
   ggsave(
     filename = here("plots/methods_comparison/raw/raw_reads_calanoida_props_spp_all_sites_18S.pdf"), 
@@ -785,16 +788,16 @@ zooscan_calanoid=zooscan_by_sample %>%
   
 
 #Relative Abundances
-zooscan_relative=read.csv(here("data/Zooscan/zoop_calanoid_by_sample_relative_abundance.csv"))%>%
-  mutate(Sample_ID=sample_id) %>%
-  mutate(size_fraction = case_when(
-    size_fraction %in% names(size_mapping) ~ size_mapping[size_fraction],
-    TRUE ~ NA_real_)) %>%
-  group_by(PC1,size_fraction,Sample_ID) %>%
-  summarise(relative_abundance_zoo=sum(relative_abundance)) 
+# zooscan_relative=read.csv(here("data/Zooscan/zoop_calanoid_by_sample_relative_abundance.csv"))%>%
+#   mutate(Sample_ID=sample_id) %>%
+#   mutate(size_fraction = case_when(
+#     size_fraction %in% names(size_mapping) ~ size_mapping[size_fraction],
+#     TRUE ~ NA_real_)) %>%
+#   group_by(PC1,size_fraction,Sample_ID) %>%
+#   summarise(relative_abundance_zoo=sum(relative_abundance)) 
 
 ## ==== Biomass & Biomass proportions plots === #
-labels_for_map=biomass_map %>% 
+labels_for_map=zooscan_calanoid %>% 
   ungroup()%>%
   select(Sample_ID_short,PC1) %>%
   unique(.) %>%
@@ -818,13 +821,13 @@ zooscan_calanoid %>%
   scale_x_discrete(labels = labels_for_map$Sample_ID_short)->calanoid_biomass_prop_zooscan
 calanoid_biomass_prop_zooscan
 
-#Save
-ggsave(
-  filename = here("plots/methods_comparison/zooscan_calanoid_biomass_proportions.pdf"), 
-  plot = calanoid_biomass_zooscan,
-  width = 8,  # Width in inches
-  height = 6  # Height in inches
-)
+# #Save
+# ggsave(
+#   filename = here("plots/methods_comparison/zooscan_calanoid_biomass_proportions.pdf"), 
+#   plot = calanoid_biomass_zooscan,
+#   width = 8,  # Width in inches
+#   height = 6  # Height in inches
+# )
 
 
 #Biomass
@@ -1029,6 +1032,11 @@ ggsave(
 )
  
 
+
+
+# Correlations ------------------------------------------------------------
+
+
 ## Correlation plot
 
 # Check distribution
@@ -1057,20 +1065,8 @@ clusters=read.csv(here("data/physical_environmental_data/pca_clusters.csv")) %>%
                     select(-Sample_ID_dot) %>% unique()
                   
                   
-pcr_raw_zoo_18s=pcr_raw_zoo_18s %>%
-left_join(.,clusters,by="PC1")
-#Check outliers
-# Calculate quantiles
-quantiles <- quantile(pcr_raw_zoo_18s$biomass_prop_taxa, c(0.25, 0.75))
-IQR <- quantiles[2] - quantiles[1]
 
-# Define lower and upper bounds (e.g., using 1.5*IQR)
-lower_bound <- quantiles[1] - 1.5 * IQR
-upper_bound <- quantiles[2] + 1.5 * IQR
-pcr_raw_zoo_18s_outliers_rm=pcr_raw_zoo_18s %>%
-  filter(biomass_prop_taxa >= lower_bound & biomass_prop_taxa <= upper_bound)
-
-pcr_raw_zoo_18s_outliers_rm %>%
+pcr_raw_zoo_18s %>%
   filter(!is.na(cycle.y))%>%
   # filter(cycle.y=="1") %>%
   ggplot(.,aes(x=asin(sqrt(biomass_prop_taxa)), y=asin(sqrt(n_reads_pcr))))+
@@ -1079,10 +1075,10 @@ pcr_raw_zoo_18s_outliers_rm %>%
   scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   # geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
-  facet_wrap(~size_fraction, nrow=3) +
-  labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "PCR Bias-Mitigated Relative Abundance (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
-  ggtitle("Spearman Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance")+
-  stat_cor(method = "spearman", label.x = 0.1, label.y = 1.3)+
+  # facet_wrap(~size_fraction, nrow=3) +
+  labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "PCR Bias-Mitigated Relative Abundance\n (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
+  ggtitle("Pearson Correlation between PCR Bias-Mitigated and Raw Read Relative Abundance")+
+  stat_cor(method="pearson", label.x = 0.1, label.y = 1.28)+
   guides(size = FALSE, fill=FALSE) +
   theme_classic()+
   theme(axis.text.x = element_text(hjust = 1, size = 12),
@@ -1091,10 +1087,10 @@ pcr_raw_zoo_18s_outliers_rm %>%
         strip.text = element_text(size = 14))->zoo_vs_pcr
   zoo_vs_pcr
   ggsave(
-    filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_size.pdf"),
+    # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_size.pdf"),
     # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_cycle.pdf"),
     # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_clust.pdf"),
-    # filename = here("plots/methods_comparison/grouped_bar_relative_abundance_diff_sig_diffs.pdf"), 
+    filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s.pdf"),
     plot = zoo_vs_pcr,
     width = 12,  # Width in inches
     height = 6  # Height in inches
@@ -1111,7 +1107,7 @@ pcr_raw_zoo_18s_outliers_rm %>%
   
 
 #### =====  
-  pcr_raw_zoo_18s_outliers_rm %>%
+  pcr_raw_zoo_18s %>%
     filter(!is.na(cycle.y))%>%
     # filter(cycle.y=="1") %>%
     ggplot(.,aes(x=asin(sqrt(biomass_prop_taxa)), y=asin(sqrt(n_reads_raw))))+
@@ -1120,11 +1116,11 @@ pcr_raw_zoo_18s_outliers_rm %>%
     scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
     scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
     # geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
-    labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "Raw Relative Abundance (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
-    ggtitle("Spearman Correlation between Zooscan Biomass Proportion and Raw Relative Abundance")+
-    stat_cor(method = "spearman", label.x = 0.1, label.y = 1.5)+
+    labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "Raw Relative Abundance\n (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
+    ggtitle("Pearson Correlation between Zooscan Biomass Proportion\n and Raw Relative Abundance")+
+    stat_cor(method = "pearson", label.x = 0.1, label.y = 1.5)+
     guides(size = FALSE, fill=FALSE) +
-    facet_wrap(~size_fraction, nrow=3) +
+    # facet_wrap(~size_fraction, nrow=3) +
     theme_classic()+
     theme(axis.text.x = element_text(hjust = 1, size = 12),
           axis.text.y = element_text(size = 12),
@@ -1132,7 +1128,8 @@ pcr_raw_zoo_18s_outliers_rm %>%
           strip.text = element_text(size = 14))->zoo_vs_raw
   zoo_vs_raw
   ggsave(
-    filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_size.pdf"),
+    # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_size.pdf"),
+    filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s.pdf"),
     # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_cycle.pdf"),
     # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_clust.pdf"),
     # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_cycle.pdf"),
@@ -1142,8 +1139,9 @@ pcr_raw_zoo_18s_outliers_rm %>%
   )
 
   ggsave(
-    filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_size.png"),
-    # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_cycle.png"),
+    # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_size.png"),
+    filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s.png"),
+        # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_cycle.png"),
     # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_clust.png"),
     # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_clust.png"),
     
@@ -1155,35 +1153,35 @@ pcr_raw_zoo_18s_outliers_rm %>%
   
   
   ### PCR vs Raw
-  pcr_raw_zoo_18s_outliers_rm %>%
+  pcr_raw_zoo_18s %>%
     filter(!is.na(cycle.y))%>%
     # filter(cycle.y=="1") %>%
-    ggplot(.,aes(x=n_reads_pcr, y=n_reads_raw))+
+    ggplot(.,aes(x=asin(sqrt(n_reads_raw)), y=asin(sqrt(n_reads_pcr))))+
     geom_point(aes(shape=cycle.y, size=8,color=as.factor(size_fraction),fill=as.factor(size_fraction)))+
     scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
     scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
     scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
-    geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
+    # geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
     labs(x = "PCR Bias-Mitigated Relative Abundance", y = "Raw Reads Relative Abundance", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
-    ggtitle("Spearman Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance")+
-    stat_cor(method = "spearman", label.x = 0.1, label.y = 0.2)+
+    ggtitle("Pearson Correlation betweenRaw Reads Relative Abundance\n and PCR Bias-Mitigated Relative Abundance")+
+    stat_cor(method = "pearson", label.x = 0.1, label.y = 0.2)+
     guides(size = FALSE, fill=FALSE) +
     theme_classic()+
     theme(axis.text.x = element_text(hjust = 1, size = 12),
           axis.text.y = element_text(size = 12),
           axis.title = element_text(size = 14),
-          strip.text = element_text(size = 14))->zoo_vs_raw
-  zoo_vs_raw
+          strip.text = element_text(size = 14))->pcr_vs_raw
+  pcr_vs_raw
   ggsave(
-    filename = here("plots/methods_comparison/zooscan_vs_raw_correlation.pdf"),
-    plot = zoo_vs_raw,
+    filename = here("plots/methods_comparison/pcr_vs_raw_correlation.pdf"),
+    plot = pcr_vs_raw,
     width = 12,  # Width in inches
     height = 6  # Height in inches
   )
   
   ggsave(
-    filename = here("plots/methods_comparison/zooscan_vs_raw_correlation.png"),
-    plot = zoo_vs_raw,
+    filename = here("plots/methods_comparison/pcr_vs_raw_correlation.png"),
+    plot = pcr_vs_raw,
     width = 12,  # Width in inches
     height = 6  # Height in inches
   )
@@ -1197,19 +1195,19 @@ pcr_raw_zoo_18s_outliers_rm %>%
   ## ANCOVA with groupings
   library(rstatix)
   #18s raw-RA
-  ancova_result_18s_raw <- pcr_raw_zoo_18s_outliers_rm %>%
+  ancova_result_18s_raw <- pcr_raw_zoo_18s %>%
     filter(!is.na(n_reads_raw))%>%
     mutate(t1 = ifelse(cycle.y == "T1", cycle.y, "other")) %>%
-    lm(asin(sqrt(n_reads_raw)) ~ asin(sqrt(biomass_prop_taxa))+size_fraction, data = .)
+    lm(asin(sqrt(n_reads_raw)) ~ asin(sqrt(biomass_prop_taxa))+size_fraction+cycle.y, data = .)
   
   #Can remove offshore_onshore and interactions for cycle
   anova(ancova_result_18s_raw)
   # Diagnostic plots
   par(mfrow=c(2,2)) # Create a 2x2 layout for the plots
-  plot(ancova_result) # Plot diagnostic plots
+  plot(ancova_result_18s_raw) # Plot diagnostic plots
   
   #18s PCR-RA
-  ancova_result_18s_pcr <- pcr_raw_zoo_18s_outliers_rm %>%
+  ancova_result_18s_pcr <- pcr_raw_zoo_18s %>%
     filter(!is.na(n_reads_raw))%>%
     mutate(t1 = ifelse(cycle.y == "T1", cycle.y, "other")) %>%
     lm(asin(sqrt(n_reads_pcr)) ~ asin(sqrt(biomass_prop_taxa))*size_fraction*cycle.y*offshore_onshore, data = .)
@@ -1218,7 +1216,7 @@ pcr_raw_zoo_18s_outliers_rm %>%
   anova(ancova_result_18s_pcr)
   # Diagnostic plots
   par(mfrow=c(2,2)) # Create a 2x2 layout for the plots
-  plot(ancova_result) # Plot diagnostic plots
+  plot(ancova_result_18s_pcr) # Plot diagnostic plots
 
 
 

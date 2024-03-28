@@ -50,6 +50,7 @@ meta=sample_data(coi_metazoo_meta)
 meta$cycle=meta$cycle %>% as.factor()
 Phy_coi_raw <- phyloseq(OTU, TAX, meta)
 
+
 #Merge by sample site
 Phy_merged_coi_raw <- merge_samples(Phy_coi_raw,c("Sample_ID_short"))
 
@@ -89,33 +90,27 @@ Phy_merged_zhan_raw=phyloseq(otu_table(Phy_merged_zhan_raw),tax_table(Phy_merged
 
 ###Correlate PC1 and Shannon
 
-#compute Shannon index
-shannon_coi=estimate_richness(Phy_merged_coi_raw, measures="Shannon") %>% 
-  rownames_to_column("Sample_ID_short")
-shannon_18s=estimate_richness(Phy_merged_zhan_raw, measures="Shannon") %>% 
-  rownames_to_column("Sample_ID_short")
-
-#Chao
-chao_coi=estimate_richness(Phy_merged_coi_raw, measures="Chao1") %>% 
-  rownames_to_column("Sample_ID_short")
-chao_zhan=estimate_richness(Phy_merged_zhan_raw, measures="Chao1") %>% 
-  rownames_to_column("Sample_ID_short")
-
-
+#compute Shannon & Chao index
 plot_data_coi=coi_metazoo_meta_all %>% as.data.frame() %>% 
   rownames_to_column("Sample_ID_short") %>%
-  left_join(.,shannon_coi, by="Sample_ID_short") 
+  mutate(estimate_richness(Phy_merged_coi_raw, measures="Shannon")) %>% 
+  mutate(estimate_richness(Phy_merged_coi_raw, measures="Chao1"))
 
 plot_data_18s=zhan_metazoo_meta_all %>% as.data.frame() %>% 
   rownames_to_column("Sample_ID_short") %>%
-  left_join(.,shannon_18s, by="Sample_ID_short")
+  mutate(estimate_richness(Phy_merged_zhan_raw, measures="Shannon")) %>% 
+  mutate(estimate_richness(Phy_merged_zhan_raw, measures="Chao1"))
+
+
 
 #Correlate
 #Test corr
 # Calculate Pearson's correlation coefficient and p-value
-correlation_result_coi <- cor.test(plot_data_coi$PC1, plot_data_coi$Shannon, method = "pearson")
+correlation_result_coi <- cor.test(plot_data_coi$PC1, plot_data_coi$Shannon, method = "spearman")
 correlation_result_18s <- cor.test(plot_data_18s$PC1, plot_data_18s$Shannon, method = "pearson")
 
+correlation_result_coi
+correlation_result_18s
 # Extract Pearson's r and p-value
 pearsons_r <- correlation_result_coi$estimate
 p_value <- correlation_result_coi$p.value
@@ -125,7 +120,7 @@ p_value <- correlation_result_18s$p.value
 
 # Print Pearson's r and p-value
 print(paste("Pearson's r:", round(pearsons_r, 3)))
-print(paste("p-value:", format(p_value, scientific = TRUE)))
+print(paste("p-value:", format(p_value, scientific = FALSE)))
 
 
 # Run linear regression
@@ -159,10 +154,10 @@ coi_plot=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
   labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI") +
   scale_color_discrete(name = "Cycle") +  # Adjust color legend label
   stat_cor(method="pearson", label.x = 4, label.y = 3.5)+
-  # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.7)+
+  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.7)+
   theme_classic()
 coi_plot
-saving=1
+saving=0
 if (saving==1) {
   ggsave(
     filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_coi_all.pdf"), 

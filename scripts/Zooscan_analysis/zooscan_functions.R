@@ -79,22 +79,22 @@ transform_by_taxa_group <- function(df, length_type) {
   if (length_type == "esd"){
   df %>% mutate(dryweight_C_ug=case_when(
     object_annotation_category=="Copepoda<Maxillopoda" ~ copepods(esd_mm),
-    object_annotation_category=="Calanoida" ~ copepods(esd_mm),
-    object_annotation_category=="Oithonidae" ~ copepods(esd_mm),
-    object_annotation_category=="Harpacticoida" ~ copepods(esd_mm),
-    object_annotation_category=="Poecilostomatoida" ~ copepods(esd_mm),
-    object_annotation_category=="Eucalanidae" ~ copepods(esd_mm),
-    object_annotation_category=="Euphausiacea" ~ euphausiids(esd_mm ),
-    object_annotation_category=="Hydrozoa" ~ hydrozoans(esd_mm),
-    object_annotation_category=="Polychaeta" ~ polychaetes(esd_mm),
-    object_annotation_category=="Ostracoda" ~ ostracods(esd_mm),
-    object_annotation_category=="Eumalacostraca" ~ decapods(esd_mm),
+    object_annotation_category=="Calanoida" ~ calanoids_pl(esd_mm),
+    object_annotation_category=="Oithonidae" ~ copepods_pl(esd_mm),
+    object_annotation_category=="Harpacticoida" ~ copepods_pl(esd_mm),
+    object_annotation_category=="Poecilostomatoida" ~ copepods_pl(esd_mm),
+    object_annotation_category=="Eucalanidae" ~ copepods_pl(esd_mm),
+    object_annotation_category=="Euphausiacea" ~ euphausiids_tl(esd_mm ),
+    object_annotation_category=="Hydrozoa" ~ hydrozoans_tl(esd_mm),
+    object_annotation_category=="Polychaeta" ~ polychaetes_tl(esd_mm),
+    object_annotation_category=="Ostracoda" ~ ostracods_tl(esd_mm),
+    object_annotation_category=="Eumalacostraca" ~ decapods_tl(esd_mm),
     object_annotation_category=="tetrazoid" ~ pyrosomes(esd_mm),
     object_annotation_category=="Salpida" ~ salps(esd_mm),
-    object_annotation_category=="Hyperiidea" ~ hyperiids(esd_mm),
+    object_annotation_category=="Hyperiidea" ~ hyperiids_tl(esd_mm),
     object_annotation_category=="Pteropoda" ~ thecosomes(esd_mm),
     object_annotation_category=="Doliolida" ~ doliolids(esd_mm),
-    object_annotation_category=="Chaetognatha" ~ chaetognaths(esd_mm),
+    object_annotation_category=="Chaetognatha" ~ chaetognaths_tl(esd_mm),
     TRUE ~ NA_real_))->df
     
   } else if (length_type == "feret"){
@@ -116,6 +116,10 @@ transform_by_taxa_group <- function(df, length_type) {
       object_annotation_category=="Pteropoda" ~ thecosomes(object_feret),
       object_annotation_category=="Doliolida" ~ doliolids(object_feret),
       object_annotation_category=="Chaetognatha" ~ chaetognaths(object_feret),
+      object_annotation_category=="Oikopleuridae" ~ appendicularians(object_feret),
+      
+      
+      
       TRUE ~ NA_real_))->df
       
   } else {
@@ -155,13 +159,49 @@ copepods <- function(ESD) {
   return(C_ug)
 }
 
+calanoids_pl <- function(ESD) {
+  a=0.038
+  b=1.2
+  PL=ESD/b-a
+  log_C_microgram <- -6.76 + 2.512 * log10(PL*1000)
+  C_ug=10^(log_C_microgram)
+  return(C_ug)
+}
+
+copepods_pl <- function(ESD) {
+  a=0.031
+  b=1.2
+  PL=ESD/b-a
+  log_C_microgram <- -6.76 + 2.512 * log10(PL*1000)
+  C_ug=10^(log_C_microgram)
+  return(C_ug)
+}
+
 euphausiids <- function(ESD) {
   log_C_microgram <- -0.473 + 3.174 * log10(ESD)
   C_ug=10^(log_C_microgram)
   return(C_ug)
 }
 
+euphausiids_tl <- function(ESD) {
+  a=0.34
+  b=2
+  TL=ESD/b-a
+  log_C_microgram <- -0.473 + 3.174 * log10(TL)
+  C_ug=10^(log_C_microgram)
+  return(C_ug)
+}
+
 ostracods <- function(ESD) {
+  C_ug =(17.072*ESD^2.545)*0.398
+  return(C_ug)
+}
+
+
+ostracods_tl <- function(ESD) {
+  a=0.097
+  b=1.4
+  TL=ESD/b-a
   C_ug =(17.072*ESD^2.545)*0.398
   return(C_ug)
 }
@@ -172,6 +212,16 @@ hyperiids <- function(ESD) {
   return(C_ug)
 }
 
+hyperiids_tl <- function(ESD) {
+  a=0.17
+  b=1.5
+  TL=ESD/b-a
+  log_C_mg = 2.314 + 2.957*log10(TL) #mg
+  C_ug=10^(log_C_mg)*1000*0.365
+  return(C_ug)
+}
+
+## Need to check this
 decapods <- function(ESD) {
   coefs=mean(0.133,0.322,0.810)
   exps=mean(2.44,2.31,1.77)
@@ -181,8 +231,29 @@ decapods <- function(ESD) {
   return(C_ug)
 }
 
+decapods_tl <- function(ESD) {
+  a=0.064
+  b=1.7
+  TL=ESD/b-a
+  coefs=mean(0.133,0.322,0.810)
+  exps=mean(2.44,2.31,1.77)
+  C_mg =coefs*(TL)^exps
+  C_ug=C_mg*1000
+  
+  return(C_ug)
+}
+
 appendicularians <- function(ESD) {
   DW_ug = 38.8*ESD^2.574
+  C_ug = 0.49*DW_ug^1.12
+  return(C_ug)
+}
+
+appendicularians_tl <- function(ESD) {
+  a=0.074
+  b=0.59
+  TL=ESD/b-a
+  DW_ug = 38.8*TL^2.574
   C_ug = 0.49*DW_ug^1.12
   return(C_ug)
 }
@@ -218,7 +289,24 @@ chaetognaths <- function(ESD) {
   return(C_ug)
 }
 
+chaetognaths_tl <- function(ESD) {
+  a=0.25
+  b=4.2
+  TL=ESD/b-a
+  ESD=as.numeric(TL)  # Add this line to print the class of ESD
+  C_ug = 0.0956 * TL^2.9093
+  return(C_ug)
+}
+
 polychaetes<- function(ESD) {
+  C_ug = 7.58*ESD^1.3848
+  return(C_ug)
+}
+
+polychaetes_tl<- function(ESD) {
+  a=0.22
+  b=1.9
+  PL=ESD/b-a
   C_ug = 7.58*ESD^1.3848
   return(C_ug)
 }
@@ -228,7 +316,14 @@ hydrozoans<- function(ESD) {
   return(C_ug)
 }
 
-
+hydrozoans_tl<- function(ESD) {
+  #Use Cnidarian Values
+  a=0.22
+  b=0.9
+  PL=ESD/b-a
+  C_ug = 20.47*ESD^0.834
+  return(C_ug)
+}
 
 
 

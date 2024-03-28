@@ -7,11 +7,15 @@ library(gridExtra)
 
 set.seed(5903)
 
-# 18S ---------------------------------------------------------------------
+
+
+# All Pools ---------------------------------------------------------------
+
+## 18S ---------------------------------------------------------------------
 
 
 ###Load in the ECDF-filtered data for the 18S primer using long format species and hash name so I ca identify taxa
-##First Size 1
+
 #Phyloseq Filtered
 fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Family")
@@ -59,7 +63,7 @@ p_s1
 
 
 #Size 2
-##First Size 1
+
 #Phyloseq Filtered
 fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s2_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Family")
@@ -107,7 +111,7 @@ p_s2=plot(fit_s2, par="Lambda", focus.cov="cycle_num")+
 
 
 #Size 3
-##First Size 1
+
 #Phyloseq Filtered
 fido_input_filt_s3=read.csv(here("data/fido/phy/fido_18s_s3_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Family")
@@ -186,7 +190,7 @@ ggsave(
 
 # COI ---------------------------------------------------------------------
 ###Load in the ECDF-filtered data for the 18S primer using long format species and hash name so I ca identify taxa
-##First Size 1
+
 #Phyloseq Filtered
 
 
@@ -213,7 +217,8 @@ Y[1:5,1:5]
 fit_s1 <- pibble(Y_s1, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s1 <- to_clr(fit_s1)
-fit_s1_df_all_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s1_df_all_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="All_S1_COI")
 
 # pull out indices for random intercepts corresponding to `sample_num`
 focus.covariate <- rownames(X)[which(grepl("sample_num", rownames(X)))]
@@ -233,7 +238,6 @@ p_s1
 
 
 #Size 2
-##First Size 1
 #Phyloseq Filtered
 fido_input_filt=read.csv(here("data/fido/phy/fido_coi_s2_ecdf_taxa_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Genus")
@@ -257,7 +261,8 @@ X[,1:5]
 fit_s2 <- pibble(Y_s2, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s2 <- to_clr(fit_s2)
-fit_s2_df_all_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s2_df_all_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="All_S2_COI")
 
 
 # pull out indices for random intercepts corresponding to `sample_num`
@@ -281,7 +286,6 @@ p_s2=plot(fit_s2, par="Lambda", focus.cov="cycle_num")+
 
 
 #Size 3
-##First Size 1
 #Phyloseq Filtered
 fido_input_filt_s3=read.csv(here("data/fido/phy/fido_coi_s3_ecdf_taxa_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Genus")
@@ -305,7 +309,8 @@ Y_s3=fido_input_filt_s3%>% as.matrix()
 fit_s3 <- pibble(Y_s3, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s3 <- to_clr(fit_s3)
-fit_s1_df_all_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s3_df_all_coi=summary(fit_s3, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="All_S3_COI")
 
 
 
@@ -357,7 +362,8 @@ ggsave(
 
 #  Subpools ---------------------------------------------------------------
 
-#COI
+# COI Subpools ------------------------------------------------------------
+
 # A1-A3 -------------------------------------------------------------------
 
 
@@ -384,7 +390,10 @@ Y_s1[1:5,1:5]
 fit_s1 <- pibble(Y_s1, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s1 <- to_clr(fit_s1)
-fit_s1_df_a1_a3_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s1_df_a1_a3_coi=summary(fit_s1, pars = "Lambda") %>% 
+  as.data.frame() %>% 
+  filter(Lambda.covariate=="cycle_num") %>% 
+  mutate(pool="A1_A3_S1_COI")
 
 # pull out indices for random intercepts corresponding to `sample_num`
 focus.covariate <- rownames(X)[which(grepl("sample_num", rownames(X)))]
@@ -426,7 +435,8 @@ X[,1:5]
 fit_s2 <- pibble(Y_s2, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s2 <- to_clr(fit_s2)
-fit_s2_df_a1_a3_coi=summary(fit_s2, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s2_df_a1_a3_coi=summary(fit_s2, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="A1_A3_S2_COI")
 
 # pull out indices for random intercepts corresponding to `sample_num`
 focus.covariate <- rownames(X)[which(grepl("sample_num", rownames(X)))]
@@ -449,7 +459,7 @@ p_s2=plot(fit_s2, par="Lambda", focus.cov="cycle_num")+
 
 
 #Size 3
-##First Size 1
+
 #Phyloseq Filtered
 fido_input_filt=read.csv(here("data/fido/phy/sub_pools/fido_coi_s3_ecdf_taxa_phy_a1_a3.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Genus")
@@ -473,7 +483,8 @@ Y_s3=fido_input_filt_s3%>% as.matrix()
 fit_s3 <- pibble(Y_s3, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s3 <- to_clr(fit_s3)
-fit_s3_df_a1_a3_coi=summary(fit_s3, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s3_df_a1_a3_coi=summary(fit_s3, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="A1_A3_S3_COI")
 
 
 
@@ -549,7 +560,8 @@ Y_s1[1:5,1:5]
 fit_s1 <- pibble(Y_s1, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s1 <- to_clr(fit_s1)
-fit_s1_df_b3_b5_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s1_df_b3_b5_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="B3_B5_S1_COI")
 
 # pull out indices for random intercepts corresponding to `sample_num`
 focus.covariate <- rownames(X)[which(grepl("sample_num", rownames(X)))]
@@ -591,7 +603,8 @@ X[,1:5]
 fit_s2 <- pibble(Y_s2, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s2 <- to_clr(fit_s2)
-fit_s2_df_b3_b5_coi=summary(fit_s2, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s2_df_b3_b5_coi=summary(fit_s2, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="B3_B5_S2_COI")
 
 # pull out indices for random intercepts corresponding to `sample_num`
 focus.covariate <- rownames(X)[which(grepl("sample_num", rownames(X)))]
@@ -611,10 +624,10 @@ p_s2=plot(fit_s2, par="Lambda", focus.cov="cycle_num")+
         axis.text.x = element_text(size = 14),    # Increase x-axis tick label size
         axis.text.y = element_text(size = 14))    # Increase y-axis tick label size
 
-
+p_s2
 
 #Size 3
-##First Size 1
+
 #Phyloseq Filtered
 fido_input_filt=read.csv(here("data/fido/phy/sub_pools/fido_coi_s3_ecdf_taxa_phy_b3_b5.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Genus")
@@ -626,19 +639,20 @@ meta_coi=read.csv(file.path("data/fido/sub_pools/meta_coi_unaveraged_s3_b3_b5.cs
 colnames(fido_input_filt) <- gsub("^X", "", colnames(fido_input_filt))
 
 ##Next, we need to make sure that the orders are the same between meta_coi and fido_input_filt
-meta_coi_s3 <- meta_coi_s3[match(colnames(fido_input_filt_s3), meta_coi_s3$Sample_name),]
+meta_coi <- meta_coi[match(colnames(fido_input_filt), meta_coi$Sample_name),]
 
 #Model matrix
 #This will fit a linear model with an intercept for every sample (no global intercept because of the "-1") and a slope for cycle number
-X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_coi_s3))
-Y_s3=fido_input_filt_s3%>% as.matrix() 
+X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_coi))
+Y_s3=fido_input_filt%>% as.matrix() 
 
 
 
 fit_s3 <- pibble(Y_s3, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s3 <- to_clr(fit_s3)
-fit_s3_df_b3_b5_coi=summary(fit_s3, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s3_df_b3_b5_coi=summary(fit_s3, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="B3_B5_S3_COI")
 
 
 
@@ -714,7 +728,8 @@ Y_s1[1:5,1:5]
 fit_s1 <- pibble(Y_s1, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s1 <- to_clr(fit_s1)
-fit_s1_df_c5_c7_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s1_df_c5_c7_coi=summary(fit_s1, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="C5_C7_S1_COI")
 
 # pull out indices for random intercepts corresponding to `sample_num`
 focus.covariate <- rownames(X)[which(grepl("sample_num", rownames(X)))]
@@ -756,7 +771,8 @@ X[,1:5]
 fit_s2 <- pibble(Y_s2, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s2 <- to_clr(fit_s2)
-fit_s2_df_c5_c7_coi=summary(fit_s2, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s2_df_c5_c7_coi=summary(fit_s2, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="C5_C7_S2_COI")
 
 # pull out indices for random intercepts corresponding to `sample_num`
 focus.covariate <- rownames(X)[which(grepl("sample_num", rownames(X)))]
@@ -779,7 +795,7 @@ p_s2=plot(fit_s2, par="Lambda", focus.cov="cycle_num")+
 
 
 #Size 3
-##First Size 1
+
 #Phyloseq Filtered
 fido_input_filt=read.csv(here("data/fido/phy/sub_pools/fido_coi_s3_ecdf_taxa_phy_c5_c7.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Genus")
@@ -803,7 +819,8 @@ Y_s3=fido_input_filt_s3%>% as.matrix()
 fit_s3 <- pibble(Y_s3, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s3 <- to_clr(fit_s3)
-fit_s3_df_c5_c7_coi=summary(fit_s3, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")
+fit_s3_df_c5_c7_coi=summary(fit_s3, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num")%>% 
+  mutate(pool="C5_C7_S3_COI")
 
 
 
@@ -947,7 +964,7 @@ p_s2=plot(fit_s2, par="Lambda", focus.cov="cycle_num")+
 
 
 #Size 3
-##First Size 1
+
 #Phyloseq Filtered
 fido_input_filt=read.csv(here("data/fido/phy/sub_pools/fido_18s_s3_ecdf_taxa_phy_a1_a3.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Family")
@@ -959,12 +976,12 @@ meta_18s=read.csv(file.path("data/fido/sub_pools/meta_18s_unaveraged_all.csv"), 
 colnames(fido_input_filt) <- gsub("^X", "", colnames(fido_input_filt))
 
 ##Next, we need to make sure that the orders are the same between meta_18s and fido_input_filt
-meta_18s_s3 <- meta_18s_s3[match(colnames(fido_input_filt_s3), meta_18s_s3$Sample_name),]
+meta_18s <- meta_18s[match(colnames(fido_input_filt), meta_18s$Sample_name),]
 
 #Model matrix
 #This will fit a linear model with an intercept for every sample (no global intercept because of the "-1") and a slope for cycle number
-X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s_s3))
-Y_s3=fido_input_filt_s3%>% as.matrix() 
+X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
+Y_s3=fido_input_filt%>% as.matrix() 
 
 
 
@@ -1114,7 +1131,7 @@ p_s2=plot(fit_s2, par="Lambda", focus.cov="cycle_num")+
 
 
 #Size 3
-##First Size 1
+
 #Phyloseq Filtered
 fido_input_filt=read.csv(here("data/fido/phy/sub_pools/fido_18s_s3_ecdf_taxa_phy_b3_b5.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Family")
@@ -1126,12 +1143,12 @@ meta_18s=read.csv(file.path("data/fido/sub_pools/meta_18s_unaveraged_all.csv"), 
 colnames(fido_input_filt) <- gsub("^X", "", colnames(fido_input_filt))
 
 ##Next, we need to make sure that the orders are the same between meta_18s and fido_input_filt
-meta_18s_s3 <- meta_18s_s3[match(colnames(fido_input_filt_s3), meta_18s_s3$Sample_name),]
+meta_18s <- meta_18s[match(colnames(fido_input_filt), meta_18s$Sample_name),]
 
 #Model matrix
 #This will fit a linear model with an intercept for every sample (no global intercept because of the "-1") and a slope for cycle number
-X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s_s3))
-Y_s3=fido_input_filt_s3%>% as.matrix() 
+X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
+Y_s3=fido_input_filt%>% as.matrix() 
 
 
 
@@ -1275,11 +1292,10 @@ p_s2=plot(fit_s2, par="Lambda", focus.cov="cycle_num")+
   theme(axis.title.x = element_text(size = 14),  # Increase x-axis label size
         axis.text.x = element_text(size = 14),    # Increase x-axis tick label size
         axis.text.y = element_text(size = 14))    # Increase y-axis tick label size
-
-
+p_s2
 
 #Size 3
-##First Size 1
+
 #Phyloseq Filtered
 fido_input_filt=read.csv(here("data/fido/phy/sub_pools/fido_18s_s3_ecdf_taxa_phy_c5_c7.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Family")
@@ -1291,19 +1307,22 @@ meta_18s=read.csv(file.path("data/fido/sub_pools/meta_18s_unaveraged_all.csv"), 
 colnames(fido_input_filt) <- gsub("^X", "", colnames(fido_input_filt))
 
 ##Next, we need to make sure that the orders are the same between meta_18s and fido_input_filt
-meta_18s_s3 <- meta_18s_s3[match(colnames(fido_input_filt_s3), meta_18s_s3$Sample_name),]
+meta_18s<- meta_18s[match(colnames(fido_input_filt), meta_18s$Sample_name),]
 
 #Model matrix
 #This will fit a linear model with an intercept for every sample (no global intercept because of the "-1") and a slope for cycle number
-X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s_s3))
-Y_s3=fido_input_filt_s3%>% as.matrix() 
+X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
+Y_s3=fido_input_filt%>% as.matrix() 
 
 
 
 fit_s3 <- pibble(Y_s3, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
 
 fit_s3 <- to_clr(fit_s3)
-fit_s3_df_c5_c7_18s=summary(fit_s3, pars = "Lambda") %>% as.data.frame() %>% filter(Lambda.covariate=="cycle_num") %>% mutate(pool="C5_C7_S3_18S")
+fit_s3_df_c5_c7_18s=summary(fit_s3, pars = "Lambda") %>% 
+  as.data.frame() %>% 
+  filter(Lambda.covariate=="cycle_num") %>% 
+  mutate(pool="C5_C7_S3_18S")
 
 
 
@@ -1328,7 +1347,7 @@ p_s3=plot(fit_s3, par="Lambda", focus.cov="cycle_num")+
   theme(axis.title.x = element_text(size = 14),  # Increase x-axis label size
         axis.text.x = element_text(size = 14),    # Increase x-axis tick label size
         axis.text.y = element_text(size = 14))    # Increase y-axis tick label size
-p_s3+scale_color_brewer("Set2")
+p_s3
 
 #Plot all 
 # Combine legends
@@ -1354,10 +1373,10 @@ ggsave(
 
 ### 
 
-# Join all pools ----------------------------------------------------------
+# 18S Join all pools: All, A1-A3, B3-B5, C5-C7 ----------------------------------------------------------
 
 #18S
-all_fits=rbind(fit_s1_df_all_18s,fit_s2_df_all_18s,fit_s3_df_all_18s,
+all_fits_18s=rbind(fit_s1_df_all_18s,fit_s2_df_all_18s,fit_s3_df_all_18s,
                fit_s1_df_a1_a3_18s,fit_s2_df_a1_a3_18s,fit_s3_df_a1_a3_18s,
                fit_s1_df_b3_b5_18s,fit_s2_df_b3_b5_18s,fit_s3_df_b3_b5_18s,
                fit_s1_df_c5_c7_18s,fit_s2_df_c5_c7_18s,fit_s3_df_c5_c7_18s)%>%
@@ -1368,13 +1387,18 @@ all_fits=rbind(fit_s1_df_all_18s,fit_s2_df_all_18s,fit_s3_df_all_18s,
     size_fraction= case_when(
       Size == "S1" ~ 0.2,
       Size == "S2" ~ 0.5,
-      Size == "S3" ~ 1
-    )
-  )
+      Size == "S3" ~ 1)) %>%
+  mutate(rank_pool = case_when(
+    pool_type == "All" ~ 1,
+    pool_type == "A1" ~ 2,
+    pool_type == "B3" ~ 3,
+    pool_type == "C5" ~ 4,
+    TRUE ~ NA_integer_  # Handle any other cases
+  ))
 
 
 # Plot
-all_fits %>%
+all_fits_18s %>%
 ggplot(., aes(x = Lambda.mean, y = Lambda.coord)) + 
   geom_vline(aes(xintercept = 0), color = "black", alpha=0.5, size=2)+
   geom_errorbarh(aes(xmin = Lambda.p2.5, xmax = Lambda.p97.5,color = as.factor(pool_type)), height = 0.2) +
@@ -1386,16 +1410,119 @@ ggplot(., aes(x = Lambda.mean, y = Lambda.coord)) +
   theme(axis.text.x = element_text(size = 12),  # Adjust font size for x-axis tick labels
         axis.text.y = element_text(size = 12)) 
 
-
-all_fits %>%
-  # filter(Lambda.coord=="clr_Calanidae") %>% 
-  ggplot(., aes(x = size_fraction, y = Lambda.mean)) + 
+#By taxa
+amp_effs_all_by_taxa_18s=all_fits_18s %>%
+  ggplot(., aes(x = as.factor(size_fraction), y = Lambda.mean)) + 
   geom_hline(aes(yintercept = 0), color = "black", alpha=0.5, size=2)+
-  # geom_errorbarh(aes(xmin = Lambda.p2.5, xmax = Lambda.p97.5,color = as.factor(pool_type)), height = 0.2) +
-  geom_point(aes(color = as.factor(pool_type)),size = 8, alpha=0.8) + 
+  geom_point(aes(color = as.factor(rank_pool),), size = 8, alpha=1, stroke=2) + 
+  geom_errorbar(aes(ymin = Lambda.p2.5, ymax = Lambda.p97.5,color = as.factor(rank_pool)), width=0.2) +
+  labs(title = "COI Genus Amplification Efficiencies",
+       x = "Size Fraction",
+       y = "Centered Log Ratio",
+       color = "Pool") +
+  theme_minimal() +
+  scale_y_continuous(breaks = seq(-0.25, 0.25, by = 0.05)) +
+  scale_x_discrete(labels = c("0.2-0.5 mm", "0.5-1 mm", "1-2 mm"))+
+  facet_wrap(~Lambda.coord) +
+  theme(axis.text.x = element_text(size = 12),  # Adjust font size for x-axis tick labels
+        axis.text.y = element_text(size = 12),
+        strip.text = element_text(size = 16),
+        axis.title.x =element_text(size = 16),
+        axis.title.y =element_text(size = 16),
+        legend.title = element_text(size = 14),  # Increase legend title size
+        legend.text = element_text(size = 14))+  # Increase legend entries size+
+  scale_color_manual(values=c("#FFABAB","#c996d4", "#93d182", "#a8bbe3"),labels=c("All","Pool 1","Pool 2","Pool 3"))
+amp_effs_all_by_taxa_18s
+#PNG & PDF Save
+ggsave(
+  filename = here("plots/pre_processing/amp_effs_all_by_taxa_18s.png"),
+  plot = amp_effs_all_by_taxa_18s,
+  width = 16,  # Width in inches
+  height = 12  # Height in inches
+)
+
+ggsave(
+  filename = here("plots/pre_processing/amp_effs_all_by_taxa.pdf"),
+  plot = amp_effs_all_by_taxa_18s,
+  width = 16,  # Width in inches
+  height = 12  # Height in inches
+)
+
+
+
+
+# COI Join all pools:  All, A1-A3, B3-B5, C5-C7 ------------------------------------------------------
+all_fits_coi=rbind(fit_s1_df_all_coi,fit_s2_df_all_coi,fit_s3_df_all_coi,
+               fit_s1_df_a1_a3_coi,fit_s2_df_a1_a3_coi,fit_s3_df_a1_a3_coi,
+               fit_s1_df_b3_b5_coi,fit_s2_df_b3_b5_coi,fit_s3_df_b3_b5_coi,
+               fit_s1_df_c5_c7_coi,fit_s2_df_c5_c7_coi,fit_s3_df_c5_c7_coi)%>%
+  mutate(
+    pool_type = str_extract(pool, "^[^_]+"),
+    Size = str_extract(pool, "(S1|S2|S3)"),
+    primer = str_extract(pool, "([^_]+$)"),
+    size_fraction= case_when(
+      Size == "S1" ~ 0.2,
+      Size == "S2" ~ 0.5,
+      Size == "S3" ~ 1)) %>%
+  mutate(rank_pool = case_when(
+    pool_type == "All" ~ 1,
+    pool_type == "A1" ~ 2,
+    pool_type == "B3" ~ 3,
+    pool_type == "C5" ~ 4,
+    TRUE ~ NA_integer_  # Handle any other cases
+  ))
+
+
+# Plot
+all_fits_coi %>%
+  ggplot(., aes(x = Lambda.mean, y = Lambda.coord)) + 
+  geom_vline(aes(xintercept = 0), color = "black", alpha=0.5, size=2)+
+  geom_errorbarh(aes(xmin = Lambda.p2.5, xmax = Lambda.p97.5,color = as.factor(rank_pool)), height = 0.2) +
+  geom_point(aes(color = as.factor(rank_pool)),size = 8, alpha=0.8) + 
   labs(title="18S Family Amplification Efficiencies",x = "Offfshore \u2190 Centered Log-Ratio(PC1) \u2192 Onshore",
        y="", color = "Pool") +
+  facet_wrap(~size_fraction, nrow=3)+
   theme_minimal() +
-  facet_wrap(~Lambda.coord)+
   theme(axis.text.x = element_text(size = 12),  # Adjust font size for x-axis tick labels
         axis.text.y = element_text(size = 12)) 
+
+#By taxa
+amp_effs_all_by_taxa_coi=all_fits_coi %>%
+  ggplot(., aes(x = as.factor(size_fraction), y = Lambda.mean)) + 
+  geom_hline(aes(yintercept = 0), color = "black", alpha=0.5, size=2)+
+  geom_point(aes(color = as.factor(rank_pool),), size = 8, alpha=1.4, stroke=2) + 
+  geom_errorbar(aes(ymin = Lambda.p2.5, ymax = Lambda.p97.5,color = as.factor(rank_pool)), width=0.2) +
+  labs(title = "COI Genus Amplification Efficiencies",
+       x = "Size Fraction",
+       y = "Centered Log Ratio",
+       color = "Pool") +
+  theme_minimal() +
+  scale_y_continuous(breaks = seq(-0.25, 0.25, by = 0.05)) +
+  scale_x_discrete(labels = c("0.2-0.5 mm", "0.5-1 mm", "1-2 mm"))+
+  facet_wrap(~Lambda.coord) +
+  theme(axis.text.x = element_text(size = 12),  # Adjust font size for x-axis tick labels
+        axis.text.y = element_text(size = 12),
+        strip.text = element_text(size = 16),
+        axis.title.x =element_text(size = 16),
+        axis.title.y =element_text(size = 16),
+        legend.title = element_text(size = 14),  # Increase legend title size
+        legend.text = element_text(size = 14))+  # Increase legend entries size+
+  scale_color_manual(values=c("#FFABAB","#c996d4", "#93d182", "#a8bbe3"),labels=c("All","Pool 1","Pool 2","Pool 3"))
+# Adjust font size for y-axis tick labels
+amp_effs_all_by_taxa_coi
+#PNG & PDF Save
+ggsave(
+  filename = here("plots/pre_processing/amp_effs_all_by_taxa_coi.png"),
+  plot = amp_effs_all_by_taxa_coi,
+  width = 16,  # Width in inches
+  height = 12  # Height in inches
+)
+
+ggsave(
+  filename = here("plots/pre_processing/amp_effs_all_by_taxa_coi.pdf"),
+  plot = amp_effs_all_by_taxa_coi,
+  width = 16,  # Width in inches
+  height = 12  # Height in inches
+)
+
+
