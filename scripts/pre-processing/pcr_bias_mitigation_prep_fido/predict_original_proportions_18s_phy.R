@@ -15,6 +15,7 @@ here()
 ###Load in the ECDF-filtered data for the 18S primer using long format species and hash name so I ca identify taxa
 ##First Size 1
 #Phyloseq Filtered
+# MPN: Might be an error because I'm running the code on the fly, but colSums(fido_input_filt) does not match colSums(fido_18s_s1_final). Why?
 fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
   column_to_rownames("Family")
 
@@ -84,6 +85,10 @@ X.tmp.s1 %>% as.data.frame() %>% rownames_to_column("sample") %>%
 final_data_s1 <- data.frame()
 
 
+## MPN: BIG BIG BUG HERE!!!!!!!!!!!!!!!!!!
+## Take a look at X.tmp.s1 after you run the loop.
+## You will have a matrix with lots of 1's. Instead, each matrix should have only one 1 (for the sample you are interested in).
+## What you want to do: Either reset X.tmp.s1 to zero inside the loop OR use a tmp version of it in the loop (like X.tmp <- X.tmp.s1; X.tmp[s,] <- 1)
 #Here begins the loop
 for(s in samples_to_loop$sample){
   #Print sample name as a sanity check
@@ -93,7 +98,7 @@ for(s in samples_to_loop$sample){
   X.tmp.s1[s,] <-1
   
   
-  #
+  # MPN. You can streamline if you set response = "Y". You won't need to convert that way.
   predicted_s1 <- predict(fit_prop_1, newdata=X.tmp.s1, summary=TRUE) %>% 
     mutate(cycle_num = c(0)[sample])%>%
     mutate(size=rep("0.2-0.5mm"))%>%
@@ -206,7 +211,7 @@ p1
 
 
 
-
+## MPN: End of me looking (Apr 2, 2024). Assuming the big bug is repeated below though :)
 
 
 ############### Let's repeat for other sizes now ###############

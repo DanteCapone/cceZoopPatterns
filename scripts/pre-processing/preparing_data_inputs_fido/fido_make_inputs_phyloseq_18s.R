@@ -76,6 +76,8 @@ fido_18s_s3=all_runs%>%
   dplyr::select(c(contains("All"),contains("S3"))) %>% 
   filter(rowSums(.) != 0)
 
+# MPN: Just to clarify, what is the difference between the ".1" and ".2" samples?
+# E.g., C1.T7.H9.1 versus C1.T7.H9.2?
 
 
 ###Phyloseq filtering: Use phyloseq for filtering and agglomerating
@@ -177,10 +179,11 @@ tax18s_family=rbind(fido_18s_s1_family_taxa,fido_18s_s2_family_taxa,fido_18s_s3_
 write.csv(tax18s_family,here("data/phyloseq_bio_data/18S/fido_18s_family_tax_table.csv"))
 
 
-
+## MPN: I think there is a bug here. Why does colSums(fido_18s_s1_final) and colSums(fido_18s_s1) not match?
 
 ## ==== S1 ====
 # Separate rows based appearance in the calibration samples
+# MPN: The filter seems strict (not that it matters looking at the data). You are only allowing 0 counts in two samples or less (for the calibration samples)?
 fido_taxa_filt <- fido_18s_s1_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
 other <- fido_18s_s1_family_otu %>%
   anti_join(fido_18s_s1_family_otu %>%
