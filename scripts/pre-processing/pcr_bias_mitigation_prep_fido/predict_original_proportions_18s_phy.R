@@ -9,18 +9,12 @@ library(fido)
 library(stringr)
 library(here)
 library(gridExtra)
+library(tidybayes)
 here()
 
 
-###Load in the ECDF-filtered data for the 18S primer using long format species and hash name so I ca identify taxa
-##First Size 1
-#Phyloseq Filtered
-<<<<<<< Updated upstream
-# MPN: Might be an error because I'm running the code on the fly, but colSums(fido_input_filt) does not match colSums(fido_18s_s1_final). Why?
-fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
-=======
-fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>% 
->>>>>>> Stashed changes
+###Load in the pre-filtered family data
+fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>% 
   column_to_rownames("Family")
 
   #Metadata
@@ -40,10 +34,9 @@ fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), 
   
   
   #Fit pibble model 
-  ##MPN: Please remind me how did you choose the 20? Was it using the log marginal likelihood? If so, that code should probably be included here. Happy to chat about this more.
-  ##MPN: This is assuming the default priors for Theta, upsilon, and Xi. Probably reasonable here, but, may want to look in prior predictive checks
-  ##Basically, would run this. These first few rows are just setting the defaults (which fido auto does in the line you have)
-  gamma <- c(1,2,3,5,8,10,15,20,50,100,500,700,1000)
+  
+  #Loop thru values for Gamma
+  gamma <- c(1,2,3,5,8,10,15,20,50,100,200,300,400,500,700,1000)
    logML <- rep(NA, length(gamma))
   for(i in 1:length(gamma)){
   fit <- pibble(Y_s1, X, Gamma = gamma[i]*diag(nrow(X)), n_samples=5000)
@@ -53,9 +46,10 @@ fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), 
    
     plot(gamma, logML, type = "l")
     points(gamma, logML)
-    gamma=700
+    #400 seems good based on LML
+    gamma=400
   
-  
+  #Specify the remaining priors with default values
   upsilon <- nrow(Y_s1)+3 
   Omega <- diag(nrow(Y_s1))
   G <- cbind(diag(nrow(Y_s1)-1), -1)
@@ -65,11 +59,12 @@ fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), 
   print(priors)
   priors <- to_clr(priors)
   summary(priors, pars="Lambda", gather_prob=TRUE, as_factor=TRUE, use_names=TRUE)  
+  plot(priors)
   ##Looks ok, centered at zero
   ##end of added code
   
   ##MPN: Note, you had lower case "gamma" the parameter is upper case "Gamma". Fido was using the default here instead of what you supplied.
-  fit <- pibble(Y_s1, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
+  fit <- pibble(Y_s1, X, Gamma = gamma*diag(nrow(X)), n_samples = 10000)
   
   #Convert to centered log ratio coordinates
   fit_s1 <- to_clr(fit)
@@ -102,10 +97,6 @@ X.tmp.s1 %>% as.data.frame() %>% rownames_to_column("sample") %>%
 final_data_s1 <- data.frame()
 
 
-## MPN: BIG BIG BUG HERE!!!!!!!!!!!!!!!!!!
-## Take a look at X.tmp.s1 after you run the loop.
-## You will have a matrix with lots of 1's. Instead, each matrix should have only one 1 (for the sample you are interested in).
-## What you want to do: Either reset X.tmp.s1 to zero inside the loop OR use a tmp version of it in the loop (like X.tmp <- X.tmp.s1; X.tmp[s,] <- 1)
 #Here begins the loop
 for(s in samples_to_loop$sample){
   #Print sample name as a sanity check
@@ -115,7 +106,7 @@ for(s in samples_to_loop$sample){
   X.tmp.s1[s,] <-1
   
   
-  # MPN. You can streamline if you set response = "Y". You won't need to convert that way.
+  #
   predicted_s1 <- predict(fit_prop_1, newdata=X.tmp.s1, summary=TRUE) %>% 
     mutate(cycle_num = c(0)[sample])%>%
     mutate(size=rep("0.2-0.5mm"))%>%
@@ -156,7 +147,10 @@ for(s in samples_to_loop$sample){
   
   final_data_s1 <- bind_rows(final_data_s1, sample_temp_sel)
   
-  #Clear X.tmo
+  #Print out to make sure that only sample of interest has been selected
+  print(X.tmp.s1)
+  
+  #Clear X.tmp.s1 to reset for the next sample
   X.tmp.s1[s,] <-0
   
 }
@@ -175,48 +169,6 @@ write.csv(final_data_s1,here(paste0("data/predicted_og/predicted_og_18s_",curren
 # 0.5-1 mm ----------------------------------------------------------------
 
 
-<<<<<<< Updated upstream
-#Now make a dataframe for mapping and add lat/long
-map_pcr_18s_s1=final_data_s1 %>% filter(cycle_num==0)%>%
-  mutate(sample_id = str_extract(replicate, "(C|CT)\\d+\\.T\\d+\\.H\\d+_S\\d+")) %>%
-  left_join(metazoo_meta_map, by="sample_id")%>%
-  filter(grepl("Calanoida", coord, ignore.case = TRUE))
-
-
-
-#Load metadata
-# Load California map data
-worldmap <- map_data("world")
-states <- map_data("state")
-ca_df <- subset(states, region == "california")
-
-
-p1=ggplot(worldmap) +
-  geom_map(data = worldmap, map = worldmap, aes(map_id=region), col = "white", fill = "gray50") +
-  geom_point(data=map_pcr_18s_s1, aes(x=Longitude, y=Latitude,size=n_reads, color=size), alpha=0.7)+ 
-  # geom_point(data=taxa_sel_all, aes(x=object_lon, y=object_lat,size=concentraion, color=size_fraction, alpha=0/5))+ 
-  #Add point at location of max
-  scale_size(range = c(2,12))+
-  geom_point(data=map_pcr_18s_s1, aes(x=Longitude, y=Latitude))+ 
-  coord_fixed(xlim = c(-134, -119.0),  ylim = c(34, 38), ratio = 1.3)+
-  scale_x_continuous(breaks = seq(-118,-132, by = -2))+
-  xlab("Latitude")+
-  ylab("Longitude")+
-  labs(title="Calanoid ASV Relative Read Abundance 
-       (18S PCR bias-mitigated ASV's)")+
-  theme_classic()
-p1
-
-
-
-## MPN: End of me looking (Apr 2, 2024). Assuming the big bug is repeated below though :)
-
-
-############### Let's repeat for other sizes now ###############
-
-############First 0.5-1############
-=======
->>>>>>> Stashed changes
 fido_input_filt=read.csv(file.path("data/fido/phy/fido_18s_s2_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>%
   column_to_rownames("Family")
 #Metadata
@@ -297,13 +249,15 @@ for(s in samples_to_loop$sample){
  
   final_data_s2 <- bind_rows(final_data_s2, sample_temp_sel)
   
-  #Clear X.tmo
-  X.tmp.s2[s,] <-0
+  #Print out to make sure that only sample of interest has been selected
+  print(X.tmp.s2)
   
+  #Clear X.tmp.s1 to reset for the next sample
+  X.tmp.s2[s,] <-0
 }
 
 
-beepr::beep(4)
+beepr::beep(1)
 
 current_date <- format(Sys.Date(), "%m_%d_%Y")
 write.csv(final_data_s2,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s2_phy.csv")))
@@ -396,9 +350,11 @@ for(s in samples_to_loop$sample){
   
   final_data_s3 <- bind_rows(final_data_s3, sample_temp_sel)
   
-  #Clear X.tmo
-  X.tmp.s3[s,] <-0
+  #Print out to make sure that only sample of interest has been selected
+  print(X.tmp.s3)
   
+  #Clear X.tmp.s1 to reset for the next sample
+  X.tmp.s3[s,] <-0
 }
 
 
@@ -406,3 +362,61 @@ beepr::beep(7)
 
 current_date <- format(Sys.Date(), "%m_%d_%Y")
 write.csv(final_data_s3,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s3_phy.csv")))
+
+
+# Fido internal functions that I had to call due to bugs 
+summary.pibblefit=function (object, pars = NULL, use_names = TRUE, as_factor = FALSE, 
+          gather_prob = FALSE, ...) 
+{
+  if (is.null(pars)) {
+    pars <- c()
+    if (!is.null(object$Eta)) 
+      pars <- c(pars, "Eta")
+    if (!is.null(object$Lambda)) 
+      pars <- c(pars, "Lambda")
+    if (!is.null(object$Sigma)) 
+      pars <- c(pars, "Sigma")
+    pars <- pars[pars %in% names(object)]
+  }
+  if (summary_check_precomputed(object, pars)) 
+    return(object$summary[pars])
+  mtidy <- dplyr::filter(pibble_tidy_samples(object, use_names, 
+                                             as_factor), .data$Parameter %in% pars)
+  suppressWarnings({
+    vars <- c()
+    if ("Eta" %in% pars) 
+      vars <- c(vars, "coord", "sample")
+    if ("Lambda" %in% pars) 
+      vars <- c(vars, "coord", "covariate")
+    if (("Sigma" %in% pars) & (object$coord_system != "proportions")) {
+      vars <- c(vars, "coord", "coord2")
+    }
+    vars <- unique(vars)
+    vars <- rlang::syms(vars)
+    mtidy <- dplyr::group_by(mtidy, .data$Parameter, !!!vars)
+    if (!gather_prob) {
+      mtidy <- mtidy %>% summarise_posterior(.data$val, 
+                                             ...) %>% dplyr::ungroup() %>% split(.$Parameter) %>% 
+        purrr::map(~dplyr::select_if(.x, ~!all(is.na(.x))))
+    }
+    else if (gather_prob) {
+      mtidy <- mtidy %>% dplyr::select(-.data$iter) %>% 
+        tidybayes::mean_qi(.data$val, .width = c(0.5, 
+                                                 0.8, 0.95, 0.99)) %>% dplyr::ungroup() %>% 
+        split(.$Parameter) %>% purrr::map(~dplyr::select_if(.x, 
+                                                            ~!all(is.na(.x))))
+    }
+  })
+  return(mtidy)
+}
+
+
+
+summary_check_precomputed=   function (m, pars) 
+{
+  if (!is.null(m$summary)) {
+    if (all(!is.null(m$summary[pars]))) 
+      return(TRUE)
+  }
+  return(FALSE)
+}

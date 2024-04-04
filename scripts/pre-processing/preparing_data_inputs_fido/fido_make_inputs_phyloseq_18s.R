@@ -43,10 +43,6 @@ taxa_18s=taxa_18s_meta %>%
   column_to_rownames("Hash")
 
 
-
-filter# 2) Merging and manipulation (updated 8/24/2023 to create a new 18S input for fido where
-# I don't average technical replicates)
-
 #Format Long
 run1_long=asv18s_run1 %>%
   pivot_longer(cols = 2:ncol(asv18s_run1), #Specify the columns to pivot
@@ -133,10 +129,10 @@ fido_18s_s3_phy=phyloseq(fido_18s_s3_otu,tax18s_s3)
 
 
 
-#PHYLOSEQ
-#Agglomerate at the family level
+# Agglomerate at the Family Level -----------------------------------------
 
-#S1
+# S1 ----------------------------------------------------------------------
+
 fido_18s_s1_phy=phyloseq(fido_18s_s1_otu,tax18s_s1, metadata)
 fido_18s_s1_family=tax_glom(fido_18s_s1_phy, taxrank = "Family")
 
@@ -177,9 +173,11 @@ data.frame(
 
 
 
-#==S2
+# S2 ----------------------------------------------------------------------
 fido_18s_s2_phy=phyloseq(fido_18s_s2_otu,tax18s_s2, metadata)
 fido_18s_s2_family=tax_glom(fido_18s_s2_phy, taxrank = "Family")
+
+
 
 
 #Check colsums
@@ -223,7 +221,7 @@ data.frame(
 
 
 
-#==s3
+# S3 ----------------------------------------------------------------------
 fido_18s_s3_phy=phyloseq(fido_18s_s3_otu,tax18s_s3, metadata)
 fido_18s_s3_family=tax_glom(fido_18s_s3_phy, taxrank = "Family")
 
@@ -269,7 +267,7 @@ data.frame(
 ) %>% column_to_rownames("row_name") %>%
   rbind(.,fido_18s_s3_family_taxa) -> fido_18s_s3_family_taxa
 
-#Save aglomerated family taxa file
+#Save aglomerated family taxa file, replace all columns with 'other' where family is 'other'
 tax18s_family=rbind(fido_18s_s1_family_taxa,fido_18s_s2_family_taxa,fido_18s_s3_family_taxa) %>%
   unique() %>%
   mutate(
@@ -285,17 +283,11 @@ tax18s_family=rbind(fido_18s_s1_family_taxa,fido_18s_s2_family_taxa,fido_18s_s3_
 write.csv(tax18s_family,here("data/phyloseq_bio_data/18S/fido_18s_family_tax_table.csv"))
 
 
-## MPN: I think there is a bug here. Why does colSums(fido_18s_s1_final) and colSums(fido_18s_s1) not match?
 
 ## ==== S1 ====
 # Separate rows based appearance in the calibration samples
-<<<<<<< Updated upstream
-# MPN: The filter seems strict (not that it matters looking at the data). You are only allowing 0 counts in two samples or less (for the calibration samples)?
-fido_taxa_filt <- fido_18s_s1_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
-=======
 fido_taxa_filt <- fido_18s_s1_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2) %>%
   rownames_to_column("Hash")
->>>>>>> Stashed changes
 other <- fido_18s_s1_family_otu %>%
   anti_join(fido_18s_s1_family_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
@@ -308,7 +300,7 @@ fido_18s_s1_final <- rbind(fido_taxa_filt,other)  %>%
   summarise(across(where(is.numeric), sum, na.rm = TRUE)) %>% 
   column_to_rownames("Hash")
 
-
+colSums(fido_18s_s1_family_otu)[1:5]
 colSums(fido_18s_s1_final)[1:5]
 
 
@@ -316,6 +308,7 @@ colSums(fido_18s_s1_final)[1:5]
 fido_18s_s1_save_family_phy <- fido_18s_s1_final %>%
   rownames_to_column("Hash") %>%
   left_join(fido_18s_s1_family_taxa %>% rownames_to_column("Hash"), by = "Hash") %>% 
+  mutate(Family = ifelse(Hash == "other", "other", Family)) %>% 
   select(-Phylum, -Class, -Genus, -Order, -Species, -Hash) %>%
   group_by(Family) %>% 
   summarise(across(where(is.numeric), sum, na.rm = TRUE))
@@ -346,6 +339,7 @@ fido_18s_s2_final %>%
   rownames_to_column("Hash")%>%
   #Add taxa hash
   left_join(fido_18s_s2_family_taxa %>% rownames_to_column("Hash"), by="Hash")%>%
+  mutate(Family = ifelse(Hash == "other", "other", Family)) %>% 
   select(-Phylum, -Class, -Genus, -Order, -Species, -Hash) %>%
   group_by(Family) %>% 
   summarise(across(where(is.numeric), sum, na.rm = TRUE))->fido_18s_s2_save_family_phy
@@ -358,9 +352,6 @@ write.csv(fido_18s_s2_save_family_phy,here("data/fido/phy/fido_18s_s2_ecdf_famil
 
 
 ## ==== s3 ====
-# Separate rows based appearance in the calibration samples
-##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
-# Separate rows based appearance in the calibration samples
 fido_taxa_filt <- fido_18s_s3_family_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2) %>%
   rownames_to_column("Hash")
 other <- fido_18s_s3_family_otu %>%
@@ -380,6 +371,7 @@ fido_18s_s3_final %>%
   rownames_to_column("Hash")%>%
   #Add taxa hash
   left_join(fido_18s_s3_family_taxa %>% rownames_to_column("Hash"), by="Hash")%>%
+  mutate(Family = ifelse(Hash == "other", "other", Family)) %>% 
   select(-Phylum, -Class, -Genus, -Order, -Species, -Hash) %>%
   group_by(Family) %>% 
   summarise(across(where(is.numeric), sum, na.rm = TRUE))->fido_18s_s3_save_family_phy
