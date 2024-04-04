@@ -15,8 +15,12 @@ here()
 ###Load in the ECDF-filtered data for the 18S primer using long format species and hash name so I ca identify taxa
 ##First Size 1
 #Phyloseq Filtered
+<<<<<<< Updated upstream
 # MPN: Might be an error because I'm running the code on the fly, but colSums(fido_input_filt) does not match colSums(fido_18s_s1_final). Why?
 fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>%
+=======
+fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1) %>% 
+>>>>>>> Stashed changes
   column_to_rownames("Family")
 
   #Metadata
@@ -39,12 +43,25 @@ fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv"), 
   ##MPN: Please remind me how did you choose the 20? Was it using the log marginal likelihood? If so, that code should probably be included here. Happy to chat about this more.
   ##MPN: This is assuming the default priors for Theta, upsilon, and Xi. Probably reasonable here, but, may want to look in prior predictive checks
   ##Basically, would run this. These first few rows are just setting the defaults (which fido auto does in the line you have)
+  gamma <- c(1,2,3,5,8,10,15,20,50,100,500,700,1000)
+   logML <- rep(NA, length(gamma))
+  for(i in 1:length(gamma)){
+  fit <- pibble(Y_s1, X, Gamma = gamma[i]*diag(nrow(X)), n_samples=5000)
+      logML[i] <- fit$logMarginalLikelihood
+      print(i)
+    }
+   
+    plot(gamma, logML, type = "l")
+    points(gamma, logML)
+    gamma=700
+  
+  
   upsilon <- nrow(Y_s1)+3 
   Omega <- diag(nrow(Y_s1))
   G <- cbind(diag(nrow(Y_s1)-1), -1)
   Xi <- (upsilon-nrow(Y_s1))*G%*%Omega%*%t(G)
   Theta <- matrix(0, nrow(Y_s1)-1, nrow(X))
-  priors <- pibble(NULL, X, Gamma = 20*diag(nrow(X)), upsilon = upsilon, Theta = Theta, Xi = Xi, n_samples = 10000)
+  priors <- pibble(NULL, X, Gamma = gamma*diag(nrow(X)), upsilon = upsilon, Theta = Theta, Xi = Xi, n_samples = 10000)
   print(priors)
   priors <- to_clr(priors)
   summary(priors, pars="Lambda", gather_prob=TRUE, as_factor=TRUE, use_names=TRUE)  
@@ -140,7 +157,7 @@ for(s in samples_to_loop$sample){
   final_data_s1 <- bind_rows(final_data_s1, sample_temp_sel)
   
   #Clear X.tmo
-  X.tmp.s1[s,] <-1
+  X.tmp.s1[s,] <-0
   
 }
 
@@ -153,31 +170,12 @@ write.csv(final_data_s1,here(paste0("data/predicted_og/predicted_og_18s_",curren
 
 
 
-##MPN: Are you aggregating over the samples
-final_data_s1 %>% 
-  ggplot(., aes(fill=coord, y=n_reads, x=as.factor(cycle_num))) +
-  geom_bar(position="stack", stat="identity", width=0.5)+
-  scale_fill_discrete(name="ASV")+
-  labs(x="PCR Cycle Number",y="Relative Abundance")+
-  theme_classic()
-## It appears that 'other' is highly over-represented
 
 
-### Maps for Cycle 0 proportions
-#Load complete environmental Metadata file
-metazoo_meta=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv"))%>% 
-  dplyr::select(-c("X")) %>%
-  column_to_rownames("Sample_ID_dot")
-
-metazoo_meta_map=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.2.2023_for_map.csv"))%>% 
-  dplyr::select(-c("X")) %>%
-  column_to_rownames("Sample_ID_dot") %>%
-  mutate(offshore_onshore=metazoo_meta$offshore_onshore)%>%
-  mutate(sample_id = tolower(str_replace_all(Sample_ID_short, "-", "_"))) %>%
-  dplyr::select(Latitude,Longitude) %>%
-  rownames_to_column("sample_id")
+# 0.5-1 mm ----------------------------------------------------------------
 
 
+<<<<<<< Updated upstream
 #Now make a dataframe for mapping and add lat/long
 map_pcr_18s_s1=final_data_s1 %>% filter(cycle_num==0)%>%
   mutate(sample_id = str_extract(replicate, "(C|CT)\\d+\\.T\\d+\\.H\\d+_S\\d+")) %>%
@@ -217,6 +215,8 @@ p1
 ############### Let's repeat for other sizes now ###############
 
 ############First 0.5-1############
+=======
+>>>>>>> Stashed changes
 fido_input_filt=read.csv(file.path("data/fido/phy/fido_18s_s2_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>%
   column_to_rownames("Family")
 #Metadata
@@ -235,7 +235,7 @@ X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
 Y_s2=fido_input_filt%>% as.matrix() 
 
 
-fit <- pibble(Y_s2, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
+fit <- pibble(Y_s2, X, Gamma = gamma*diag(nrow(X)), n_samples = 10000)
 
 # ,Convert to centered log ratio coordinates
 fit_s2 <- to_clr(fit)
@@ -298,7 +298,7 @@ for(s in samples_to_loop$sample){
   final_data_s2 <- bind_rows(final_data_s2, sample_temp_sel)
   
   #Clear X.tmo
-  X.tmp.s2[s,] <-1
+  X.tmp.s2[s,] <-0
   
 }
 
@@ -309,43 +309,8 @@ current_date <- format(Sys.Date(), "%m_%d_%Y")
 write.csv(final_data_s2,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s2_phy.csv")))
 
 
-### Maps for OG proportions
-
-#Now make a dataframe for mapping and add lat/long
-map_pcr_18s_s2=final_data_s2 %>% filter(cycle_num==0)%>%
-  mutate(sample_id = str_extract(replicate, "(C|CT)\\d+\\.T\\d+\\.H\\d+_S\\d+")) %>%
-  left_join(metazoo_meta_map, by="sample_id")%>%
-  filter(grepl("Calanoida", coord, ignore.case = TRUE))
 
 
-
-#Load metadata
-# Load California map data
-worldmap <- map_data("world")
-states <- map_data("state")
-ca_df <- subset(states, region == "california")
-
-
-p2=ggplot(worldmap) +
-  geom_map(data = worldmap, map = worldmap, aes(map_id=region), col = "white", fill = "gray50") +
-  geom_point(data=map_pcr_18s_s2, aes(x=Longitude, y=Latitude,size=n_reads, color=size), alpha=0.7)+ 
-  # geom_point(data=taxa_sel_all, aes(x=object_lon, y=object_lat,size=concentraion, color=size_fraction, alpha=0/5))+ 
-  #Add point at location of max
-  scale_size(range = c(2,12))+
-  geom_point(data=map_pcr_18s_s2, aes(x=Longitude, y=Latitude))+ 
-  coord_fixed(xlim = c(-134, -119.0),  ylim = c(34, 38), ratio = 1.3)+
-  scale_x_continuous(breaks = seq(-118,-132, by = -2))+
-  xlab("Latitude")+
-  ylab("Longitude")+
-  labs(title="Calanoid ASV Relative Read Abundance 
-       (18S PCR bias-mitigated ASV's)")+
-  theme_classic()
-p2
-
-
-
-
-######### Final size
 ##### 1-2mm####
 fido_input_filt=read.csv(file.path("data/fido/phy/fido_18s_s3_ecdf_family_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>%
   column_to_rownames("Family")
@@ -366,7 +331,7 @@ X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
 
 Y_s3=fido_input_filt%>% as.matrix() 
 
-fit <- pibble(Y_s3, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
+fit <- pibble(Y_s3, X, Gamma = gamma*diag(nrow(X)), n_samples = 10000)
 
 # ,Convert to centered log ratio coordinates
 fit_s3 <- to_clr(fit)
@@ -432,7 +397,7 @@ for(s in samples_to_loop$sample){
   final_data_s3 <- bind_rows(final_data_s3, sample_temp_sel)
   
   #Clear X.tmo
-  X.tmp.s3[s,] <-1
+  X.tmp.s3[s,] <-0
   
 }
 
@@ -441,74 +406,3 @@ beepr::beep(7)
 
 current_date <- format(Sys.Date(), "%m_%d_%Y")
 write.csv(final_data_s3,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s3_phy.csv")))
-
-### Maps for OG proportions
-#Now make a dataframe for mapping and add lat/long
-
-# final_data_s3=read.csv(here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s1.csv"))) %>%
-#   select(-X)
-
-
-map_pcr_18s_s3=final_data_s3 %>% filter(cycle_num==0)%>%
-  mutate(sample_id = str_extract(replicate, "(C|CT)\\d+\\.T\\d+\\.H\\d+_S\\d+")) %>%
-  left_join(metazoo_meta_map, by="sample_id") %>%
-  filter(grepl("Calanoida", coord, ignore.case = TRUE))
-
-
-
-#Load metadata
-# Load California map data
-worldmap <- map_data("world")
-states <- map_data("state")
-ca_df <- subset(states, region == "california")
-
-
-p3=ggplot(worldmap) +
-  geom_map(data = worldmap, map = worldmap, aes(map_id=region), col = "white", fill = "gray50") +
-  geom_point(data=map_pcr_18s_s3, aes(x=Longitude, y=Latitude,size=n_reads),color="green", alpha=0.7)+ 
-  # geom_point(data=taxa_sel_all, aes(x=object_lon, y=object_lat,size=concentraion, color=size_fraction, alpha=0/5))+ 
-  #Add point at location of max
-  scale_size(range = c(2,12))+
-  geom_point(data=map_pcr_18s_s3, aes(x=Longitude, y=Latitude))+ 
-  coord_fixed(xlim = c(-134, -119.0),  ylim = c(34, 38), ratio = 1.3)+
-  scale_x_continuous(breaks = seq(-118,-132, by = -2))+
-  xlab("Latitude")+
-  ylab("Longitude")+
-  labs(title="Calanoid ASV Relative Read Abundance 
-       (18S PCR bias-mitigated ASV's)")+
-  theme_classic()
-p3
-
-
-#Final plot
-
-#Join all 3
-# final_data_all_sizes=rbind(final_data_s1,final_data_s2,final_data_s3)
-# write.csv(final_data_all_sizes,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_all.csv")))
-
-
-map_pcr_18s=final_data_all_sizes %>% filter(cycle_num==0)%>%
-  mutate(sample_id = str_extract(replicate, "(C|CT)\\d+\\.T\\d+\\.H\\d+_S\\d+")) %>%
-  left_join(metazoo_meta_map, by="sample_id") %>%
-  filter(grepl("Calanoida", coord, ignore.case = TRUE)) %>%
-  group_by(Latitude, Longitude, sample_id) %>%
-  summarize(
-    n_reads = sum(n_reads),
-    size = toString(unique(size))
-  )
-  
-ggplot(worldmap) +
-  geom_map(data = worldmap, map = worldmap, aes(map_id=region), col = "white", fill = "gray50") +
-  geom_point(data=map_pcr_18s, aes(x=Longitude, y=Latitude,size=n_reads,color=size), alpha=0.7)+ 
-  # geom_point(data=taxa_sel_all, aes(x=object_lon, y=object_lat,size=concentraion, color=size_fraction, alpha=0/5))+ 
-  #Add point at location of max
-  scale_size(range = c(2,12))+
-  geom_point(data=map_pcr_18s, aes(x=Longitude, y=Latitude))+ 
-  coord_fixed(xlim = c(-134, -119.0),  ylim = c(34, 38), ratio = 1.3)+
-  scale_x_continuous(breaks = seq(-118,-132, by = -2))+
-  xlab("Latitude")+
-  ylab("Longitude")+
-  labs(title="Calanoid ASV PCR Bias-Corrected Relative Read Abundance (18S)")+
-  facet_wrap(~size, ncol=2)+
-  theme_classic()
-
