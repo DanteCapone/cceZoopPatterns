@@ -3,8 +3,6 @@
 
 library (tidyverse)
 library (here)
-library (lubridate)
-library(matrixStats)
 library(ggpubr)
 library(fido)
 library(phyloseq)
@@ -24,12 +22,24 @@ asv18s_run2=read.csv(here("data/past/","ASV_table_18s_run2.csv")) %>%
 
 
 #Taxa Tables 
-taxa_18s=read.csv(here("data/past/metazoopruned18s_tax.csv"))%>%
+taxa_18s_meta=read.csv(here("data/past/metazoopruned18s_tax.csv"))%>%
   mutate(non_na_count = rowSums(!is.na(select(., -Hash)))) %>%
   group_by(Hash) %>%
   filter(rank(desc(non_na_count)) == 1) %>%
   select(-non_na_count) %>%
-  ungroup() %>%
+  ungroup() 
+
+#BlAST
+taxa_18s_blast=read.csv(here("data/raw_data/BLAST_taxa_class/zhang_taxa.csv")) %>%
+  distinct(Hash, .keep_all = TRUE)
+
+taxa_18s=taxa_18s_meta %>% 
+  left_join(taxa_18s_blast,., by="Hash") %>%
+  select(-contains(".x")) %>%
+  rename_all(~gsub("\\.y", "", .)) %>% 
+  mutate_all(~replace_na(., "other")) %>% 
+  mutate(Hash = if_else(Order == "other", "other", Hash)) %>% 
+  distinct() %>% 
   column_to_rownames("Hash")
 
 
@@ -69,6 +79,8 @@ fido_18s_s3=all_runs%>%
   dplyr::select(c(contains("All"),contains("S3"))) %>% 
   filter(rowSums(.) != 0)
 
+# MPN: Just to clarify, what is the difference between the ".1" and ".2" samples?
+# E.g., C1.T7.H9.1 versus C1.T7.H9.2?
 
 
 ###Phyloseq filtering: Use phyloseq for filtering and agglomerating
@@ -83,14 +95,20 @@ fido_18s_s3_otu=fido_18s_s3 %>%
   otu_table(taxa_are_rows = TRUE)
 
 #taxa tables
-tax18s_s1 = taxa_18s %>% filter(rownames(taxa_18s) %in% rownames(fido_18s_s1))
+tax18s_s1 = taxa_18s %>% filter(rownames(taxa_18s) %in% rownames(fido_18s_s1))%>%
+  mutate(Order = ifelse(is.na(Order), Class, Order)) %>% 
+  mutate(Order = ifelse(Order=="", 'other', Order))
 tax18s_s1=  tax_table(as.matrix(tax18s_s1))
 
 #S2
-tax18s_s2 = taxa_18s %>% filter(rownames(taxa_18s) %in% rownames(fido_18s_s2_otu))
+tax18s_s2 = taxa_18s %>% filter(rownames(taxa_18s) %in% rownames(fido_18s_s2_otu))%>%
+  mutate(Order = ifelse(is.na(Order), Class, Order)) %>% 
+  mutate(Order = ifelse(Order=="", 'other', Order))
 tax18s_s2=  tax_table(as.matrix(tax18s_s2))
 #S3
-tax18s_s3 = taxa_18s %>% filter(rownames(taxa_18s) %in% rownames(fido_18s_s3_otu))
+tax18s_s3 = taxa_18s %>% filter(rownames(taxa_18s) %in% rownames(fido_18s_s3_otu))%>%
+  mutate(Order = ifelse(is.na(Order), Class, Order)) %>% 
+  mutate(Order = ifelse(Order=="", 'other', Order))
 tax18s_s3=  tax_table(as.matrix(tax18s_s3))
 
 
@@ -111,16 +129,39 @@ fido_18s_s3_phy=phyloseq(fido_18s_s3_otu,tax18s_s3)
 
 
 
-#PHYLOSEQ
-#Agglomerate at the order level
+# Agglomerate at the Order Level -----------------------------------------
 
-#S1
+# S1 ----------------------------------------------------------------------
+
 fido_18s_s1_phy=phyloseq(fido_18s_s1_otu,tax18s_s1, metadata)
 fido_18s_s1_order=tax_glom(fido_18s_s1_phy, taxrank = "Order")
 
+#Check colsums
+# Calculate column sums before tax glomming
+colsums_before <- colSums((fido_18s_s1))
+
+# Calculate column sums after tax glomming
+colsums_after <- colSums(otu_table(fido_18s_s1_order))
+
+# Find the difference
+difference <- colsums_before - colsums_after %>%
+  t() %>% 
+  as.data.frame() %>% 
+  mutate(Hash="other") %>% 
+  column_to_rownames("Hash")
+
+
 #Make inputs for filtering
-fido_18s_s1_order_otu=otu_table(fido_18s_s1_order) %>% as.data.frame()
+fido_18s_s1_order_otu=otu_table(fido_18s_s1_order) %>% as.data.frame() 
+
 fido_18s_s1_order_taxa=tax_table(fido_18s_s1_order) %>% as.data.frame() 
+
+# Add the new difference row to the dataframe
+fido_18s_s1_order_otu <- bind_rows(fido_18s_s1_order_otu, difference)
+
+
+colSums(fido_18s_s1_otu)[1:5]
+colSums(fido_18s_s1_order_otu)[1:5]
 
 #Need to add 'other' row to taxa table
 data.frame(
@@ -130,9 +171,41 @@ data.frame(
 ) %>% column_to_rownames("row_name") %>%
   rbind(.,fido_18s_s1_order_taxa) -> fido_18s_s1_order_taxa
 
-#==S2
+
+
+# S2 ----------------------------------------------------------------------
 fido_18s_s2_phy=phyloseq(fido_18s_s2_otu,tax18s_s2, metadata)
 fido_18s_s2_order=tax_glom(fido_18s_s2_phy, taxrank = "Order")
+
+
+
+
+#Check colsums
+# Calculate column sums before tax glomming
+colsums_before <- colSums((fido_18s_s2))
+
+# Calculate column sums after tax glomming
+colsums_after <- colSums(otu_table(fido_18s_s2_order))
+
+# Find the difference
+difference <- colsums_before - colsums_after %>%
+  t() %>% 
+  as.data.frame() %>% 
+  mutate(Hash="other") %>% 
+  column_to_rownames("Hash")
+
+
+#Make inputs for filtering
+fido_18s_s2_order_otu=otu_table(fido_18s_s2_order) %>% as.data.frame()
+fido_18s_s2_order_taxa=tax_table(fido_18s_s2_order) %>% as.data.frame() 
+
+# Add the new difference row to the dataframe
+fido_18s_s2_order_otu <- bind_rows(fido_18s_s2_order_otu, difference)
+
+
+colSums(fido_18s_s2_otu)[1:5]
+colSums(fido_18s_s2_order_otu)[1:5]
+
 
 #Make inputs for filtering
 fido_18s_s2_order_otu=otu_table(fido_18s_s2_order) %>% as.data.frame()
@@ -148,9 +221,39 @@ data.frame(
 
 
 
-#==s3
+# S3 ----------------------------------------------------------------------
 fido_18s_s3_phy=phyloseq(fido_18s_s3_otu,tax18s_s3, metadata)
 fido_18s_s3_order=tax_glom(fido_18s_s3_phy, taxrank = "Order")
+
+
+#Check colsums
+# Calculate column sums before tax glomming
+colsums_before <- colSums((fido_18s_s3))
+
+# Calculate column sums after tax glomming
+colsums_after <- colSums(otu_table(fido_18s_s3_order))
+
+# Find the difference
+difference <- colsums_before - colsums_after %>%
+  t() %>% 
+  as.data.frame() %>% 
+  mutate(Hash="other") %>% 
+  column_to_rownames("Hash")
+
+
+#Make inputs for filtering
+fido_18s_s3_order_otu=otu_table(fido_18s_s3_order) %>% as.data.frame() 
+
+fido_18s_s3_order_taxa=tax_table(fido_18s_s3_order) %>% as.data.frame() 
+
+# Add the new difference row to the dataframe
+fido_18s_s3_order_otu <- bind_rows(fido_18s_s3_order_otu, difference)
+
+
+colSums(fido_18s_s3_otu)[1:5]
+colSums(fido_18s_s3_order_otu)[1:5]
+
+
 
 #Make inputs for filtering
 fido_18s_s3_order_otu=otu_table(fido_18s_s3_order) %>% as.data.frame()
@@ -164,34 +267,51 @@ data.frame(
 ) %>% column_to_rownames("row_name") %>%
   rbind(.,fido_18s_s3_order_taxa) -> fido_18s_s3_order_taxa
 
-#Save aglomerated order taxa file
+#Save aglomerated order taxa file, replace all columns with 'other' where order is 'other'
 tax18s_order=rbind(fido_18s_s1_order_taxa,fido_18s_s2_order_taxa,fido_18s_s3_order_taxa) %>%
-  unique()
+  unique() %>%
+  mutate(
+    Kingdom = if_else(Order == 'other', 'other', Kingdom),
+    Phylum = if_else(Order == 'other', 'other', Phylum),
+    Subphylum = if_else(Order == 'other', 'other', Subphylum),
+    Class = if_else(Order == 'other', 'other', Class),
+    Subclass = if_else(Order == 'other', 'other', Subclass),
+    Superorder = if_else(Order == 'other', 'other', Superorder),
+  ) %>% 
+  select(-Species, -Genus, -Family)
 write.csv(tax18s_order,here("data/phyloseq_bio_data/18S/fido_18s_order_tax_table.csv"))
-
 
 
 
 ## ==== S1 ====
 # Separate rows based appearance in the calibration samples
-fido_taxa_filt <- fido_18s_s1_order_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
+fido_taxa_filt <- fido_18s_s1_order_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2) %>%
+  rownames_to_column("Hash")
 other <- fido_18s_s1_order_otu %>%
   anti_join(fido_18s_s1_order_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
   summarise_all(sum) %>% 
-  mutate(rowname = "other") %>%
-  column_to_rownames("rowname")
+  mutate(Hash = "other")
 
 # Combine data
-fido_18s_s1_final <- bind_rows(fido_taxa_filt, other)
+fido_18s_s1_final <- rbind(fido_taxa_filt,other)  %>% 
+  group_by(Hash) %>% 
+  summarise(across(where(is.numeric), sum, na.rm = TRUE)) %>% 
+  column_to_rownames("Hash")
+
+colSums(fido_18s_s1_order_otu)[1:5]
+colSums(fido_18s_s1_final)[1:5]
+
 
 #Join with taxa file
-fido_18s_s1_final %>%
-  rownames_to_column("Hash")%>%
-  #Add taxa hash
-  left_join(fido_18s_s1_order_taxa %>% rownames_to_column("Hash"), by="Hash")%>%
-  #Hash
-  select(-Phylum,-Class,-Genus,-Family,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash)->fido_18s_s1_save_order_phy
+fido_18s_s1_save_order_phy <- fido_18s_s1_final %>%
+  rownames_to_column("Hash") %>%
+  left_join(fido_18s_s1_order_taxa %>% rownames_to_column("Hash"), by = "Hash") %>% 
+  mutate(Order = ifelse(Hash == "other", "other", Order)) %>% 
+  select(-Phylum, -Class, -Genus, -Family, -Species, -Hash) %>%
+  group_by(Order) %>% 
+  summarise(across(where(is.numeric), sum, na.rm = TRUE))
+
 
 #Save
 write.csv(fido_18s_s1_save_order_phy,here("data/fido/phy/fido_18s_s1_ecdf_order_phy.csv"))
@@ -199,26 +319,29 @@ write.csv(fido_18s_s1_save_order_phy,here("data/fido/phy/fido_18s_s1_ecdf_order_
 
 
 ## ==== s2 ====
-# Separate rows based appearance in the calibration samples
-##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
-fido_taxa_filt <- fido_18s_s2_order_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
+fido_taxa_filt <- fido_18s_s2_order_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2) %>%
+  rownames_to_column("Hash")
 other <- fido_18s_s2_order_otu %>%
   anti_join(fido_18s_s2_order_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
   summarise_all(sum) %>% 
-  mutate(rowname = "other") %>%
-  column_to_rownames("rowname")
+  mutate(Hash = "other")
 
 # Combine data
-fido_18s_s2_final <- bind_rows(fido_taxa_filt, other)
+fido_18s_s2_final <- rbind(fido_taxa_filt,other)  %>% 
+  group_by(Hash) %>% 
+  summarise(across(where(is.numeric), sum, na.rm = TRUE)) %>% 
+  column_to_rownames("Hash")
 
 #Join with taxa file
 fido_18s_s2_final %>%
   rownames_to_column("Hash")%>%
   #Add taxa hash
   left_join(fido_18s_s2_order_taxa %>% rownames_to_column("Hash"), by="Hash")%>%
-  #Hash
-  select(-Phylum,-Class,-Genus,-Family,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash)->fido_18s_s2_save_order_phy
+  mutate(Order = ifelse(Hash == "other", "other", Order)) %>% 
+  select(-Phylum, -Class, -Genus, -Family, -Species, -Hash) %>%
+  group_by(Order) %>% 
+  summarise(across(where(is.numeric), sum, na.rm = TRUE))->fido_18s_s2_save_order_phy
 
 #Save
 write.csv(fido_18s_s2_save_order_phy,here("data/fido/phy/fido_18s_s2_ecdf_order_phy.csv"))
@@ -228,26 +351,28 @@ write.csv(fido_18s_s2_save_order_phy,here("data/fido/phy/fido_18s_s2_ecdf_order_
 
 
 ## ==== s3 ====
-# Separate rows based appearance in the calibration samples
-##MPN: Why do you think some of the hashes are appearing quite high in some samples but not in any of the pooled samples?
-fido_taxa_filt <- fido_18s_s3_order_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2)
+fido_taxa_filt <- fido_18s_s3_order_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2) %>%
+  rownames_to_column("Hash")
 other <- fido_18s_s3_order_otu %>%
   anti_join(fido_18s_s3_order_otu %>%
               filter(rowSums(select(., 1:9) == 0) <= 2))%>%
   summarise_all(sum) %>% 
-  mutate(rowname = "other") %>%
-  column_to_rownames("rowname")
+  mutate(Hash = "other")
 
 # Combine data
-fido_18s_s3_final <- bind_rows(fido_taxa_filt, other)
+fido_18s_s3_final <- rbind(fido_taxa_filt,other)  %>% 
+  group_by(Hash) %>% 
+  summarise(across(where(is.numeric), sum, na.rm = TRUE)) %>% 
+  column_to_rownames("Hash")
 
 #Join with taxa file
 fido_18s_s3_final %>%
   rownames_to_column("Hash")%>%
-  #Add taxa hash
   left_join(fido_18s_s3_order_taxa %>% rownames_to_column("Hash"), by="Hash")%>%
-  #Hash
-  select(-Phylum,-Class,-Genus,-Family,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash)->fido_18s_s3_save_order_phy
+  mutate(Order = ifelse(Hash == "other", "other", Order)) %>% 
+  select(-Phylum, -Class, -Genus, -Family, -Species, -Hash) %>%
+  group_by(Order) %>% 
+  summarise(across(where(is.numeric), sum, na.rm = TRUE))->fido_18s_s3_save_order_phy
 
 #Save
 write.csv(fido_18s_s3_save_order_phy,here("data/fido/phy/fido_18s_s3_ecdf_order_phy.csv"))

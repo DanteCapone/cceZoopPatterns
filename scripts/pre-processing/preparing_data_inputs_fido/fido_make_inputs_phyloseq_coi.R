@@ -1,5 +1,4 @@
-# From these runs, we didn't get data from the 20C or various pools for COI runs, but it worked for coi
-# try first with coi
+#Preparing inputs for PCR bias-mitigation for COI
 
 library (tidyverse)
 library (here)
@@ -12,29 +11,39 @@ here()
 
 
 
-###COI###
-
-# ,Read in the data
-# ,Run 1 (Non pooled data)
-asvcoi_run1=read.csv(here("data","fido","ASV_table_coi_run1.csv")) %>% 
-  dplyr::select(-X)
-
-
-# ,Run2
-asvcoi_run2=read.csv(here("data","fido","ASV_table_coi_run2.csv"))%>% 
-  dplyr::select(-X)
+#Read in the OTU data
+#Run 1 (Non pooled data)
+asvcoi_run1=read.csv(here("data/fido/ASV_table_coi_run1.csv")) %>%
+  select(-X) 
+#Run2
+asvcoi_run2=read.csv(here("data/fido/ASV_table_coi_run2.csv")) %>%
+  select(-X)
 
 
-# ,Taxa Tables 
-taxa_coi=read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_tax.csv")) %>%
+
+#Taxa Tables 
+taxa_coi_meta=read.csv(here("data/past/metazooprunedcoi_tax.csv"))%>%
+  mutate(non_na_count = rowSums(!is.na(select(., -Hash)))) %>%
+  group_by(Hash) %>%
+  filter(rank(desc(non_na_count)) == 1) %>%
+  select(-non_na_count) %>%
+  ungroup() 
+
+#BlAST
+taxa_coi_blast=read.csv(here("data/raw_data/BLAST_taxa_class/leray_taxa.csv")) %>%
+  distinct(Hash, .keep_all = TRUE)
+
+taxa_coi=taxa_coi_meta %>% 
+  left_join(taxa_coi_blast,., by="Hash") %>%
+  select(-contains(".x")) %>%
+  rename_all(~gsub("\\.y", "", .)) %>% 
+  mutate_all(~replace_na(., "other")) %>% 
+  mutate(Hash = if_else(Family == "other", "other", Hash)) %>% 
+  distinct() %>% 
   column_to_rownames("Hash")
 
 
-
-# 2) Merging and manipulation (updated 8/24/2023 to create a new coi input for fido where
-# I don't average technical replicates)
-# First need to average technical replicates
-# To do this i need to format long
+#Format Long
 run1_long=asvcoi_run1 %>%
   pivot_longer(cols = 2:ncol(asvcoi_run1), #Specify the columns to pivot
                names_to = "Sample_ID", #Name of the new variable column
@@ -54,10 +63,9 @@ all_runs=bind_rows(run1_long,run2_long) %>%
   mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, .))) %>% 
   column_to_rownames("Hash")
 
-##MPN: Another common method is to amalgamate to the genus level and add anything that doesn't fit to an "other" category. This is very common in microbiome.
-
 #Replace X
 colnames(all_runs) <- gsub("^X", "", colnames(all_runs))
+
 
 #Separate out by size
 #S1
@@ -71,10 +79,8 @@ fido_coi_s3=all_runs%>%
   dplyr::select(c(contains("All"),contains("S3"))) %>% 
   filter(rowSums(.) != 0)
 
+###Phyloseq filtering: Use phyloseq for filtering and agglomerating
 
-
-###DC: 12/14/2023-Use phyloseq for filtering and agglomerating
-##Phyloseq filtering
 fido_coi_s1_otu=fido_coi_s1 %>% 
   otu_table(taxa_are_rows = TRUE)
 
@@ -114,6 +120,10 @@ fido_coi_s3_phy=phyloseq(fido_coi_s3_otu,taxcoi_s3)
 #S1
 fido_coi_s1_phy=phyloseq(fido_coi_s1_otu,taxcoi_s1, metadata)
 fido_coi_s1_genus=tax_glom(fido_coi_s1_phy, taxrank = "Genus")
+
+#Check column sums 
+colSums(fido_coi_s1_genus_otu)[1:5]
+colSums(otu_table(fido_coi_s1_genus))[1:5]
 
 #Make inputs for filtering
 fido_coi_s1_genus_otu=otu_table(fido_coi_s1_genus) %>% as.data.frame()
@@ -194,9 +204,7 @@ fido_coi_s1_final %>%
   mutate(spp_hash=paste0(Species,".",Hash)) %>%
   #Uncomment to save spp_hash
   select(-rowsum,-Phylum,-Class,-Family,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-Hash,-spp_hash)->fido_coi_s1_save_taxa_phy
-  
-  #Hash
-  # select(-rowsum,-Phylum,-Class,-Family,-Genus,-Order,-Species,-Kingdom,-Subphylum,-Subclass,-Superorder,-spp_hash)->fido_coi_s1_save_hash_phy
+
 
 #Save
 write.csv(fido_coi_s1_save_taxa_phy,here("data/fido/phy/fido_coi_s1_ecdf_taxa_phy.csv"))

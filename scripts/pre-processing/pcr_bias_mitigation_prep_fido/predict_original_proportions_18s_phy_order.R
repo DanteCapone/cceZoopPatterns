@@ -38,12 +38,13 @@ fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_order_phy.csv"), h
   ##MPN: Please remind me how did you choose the 20? Was it using the log marginal likelihood? If so, that code should probably be included here. Happy to chat about this more.
   ##MPN: This is assuming the default priors for Theta, upsilon, and Xi. Probably reasonable here, but, may want to look in prior predictive checks
   ##Basically, would run this. These first few rows are just setting the defaults (which fido auto does in the line you have)
+  gamma=400
   upsilon <- nrow(Y_s1)+3 
   Omega <- diag(nrow(Y_s1))
   G <- cbind(diag(nrow(Y_s1)-1), -1)
   Xi <- (upsilon-nrow(Y_s1))*G%*%Omega%*%t(G)
   Theta <- matrix(0, nrow(Y_s1)-1, nrow(X))
-  priors <- pibble(NULL, X, Gamma = 20*diag(nrow(X)), upsilon = upsilon, Theta = Theta, Xi = Xi, n_samples = 10000)
+  priors <- pibble(NULL, X, Gamma = gamma*diag(nrow(X)), upsilon = upsilon, Theta = Theta, Xi = Xi, n_samples = 10000)
   print(priors)
   priors <- to_clr(priors)
   summary(priors, pars="Lambda", gather_prob=TRUE, as_factor=TRUE, use_names=TRUE)  
@@ -51,7 +52,7 @@ fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_order_phy.csv"), h
   ##end of added code
   
   ##MPN: Note, you had lower case "gamma" the parameter is upper case "Gamma". Fido was using the default here instead of what you supplied.
-  fit <- pibble(Y_s1, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
+  fit <- pibble(Y_s1, X, Gamma = gamma*diag(nrow(X)), n_samples = 10000)
   
   #Convert to centered log ratio coordinates
   fit_s1 <- to_clr(fit)
@@ -135,7 +136,7 @@ for(s in samples_to_loop$sample){
   final_data_s1 <- bind_rows(final_data_s1, sample_temp_sel)
   
   #Clear X.tmo
-  X.tmp.s1[s,] <-1
+  X.tmp.s1[s,] <-0
   
 }
 
@@ -145,18 +146,6 @@ beepr::beep(12)
 #Save final data
 current_date <- format(Sys.Date(), "%m_%d_%Y")
 write.csv(final_data_s1,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s1_phy_order.csv")))
-
-
-final_data_s1 %>% 
-  ggplot(., aes(fill=coord, y=n_reads, x=as.factor(cycle_num))) +
-  geom_bar(position="stack", stat="identity", width=0.5)+
-  scale_fill_discrete(name="ASV")+
-  labs(x="PCR Cycle Number",y="Relative Abundance")+
-  theme_classic()
-
-
-
-
 
 
 
@@ -181,7 +170,7 @@ X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
 Y_s2=fido_input_filt%>% as.matrix() 
 
 
-fit <- pibble(Y_s2, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
+fit <- pibble(Y_s2, X, Gamma = gamma*diag(nrow(X)), n_samples = 10000)
 
 # ,Convert to centered log ratio coordinates
 fit_s2 <- to_clr(fit)
@@ -244,7 +233,7 @@ for(s in samples_to_loop$sample){
   final_data_s2 <- bind_rows(final_data_s2, sample_temp_sel)
   
   #Clear X.tmo
-  X.tmp.s2[s,] <-1
+  X.tmp.s2[s,] <-0
   
 }
 
@@ -277,7 +266,7 @@ X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_18s))
 
 Y_s3=fido_input_filt%>% as.matrix() 
 
-fit <- pibble(Y_s3, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
+fit <- pibble(Y_s3, X, Gamma = gamma*diag(nrow(X)), n_samples = 10000)
 
 # ,Convert to centered log ratio coordinates
 fit_s3 <- to_clr(fit)
@@ -343,7 +332,7 @@ for(s in samples_to_loop$sample){
   final_data_s3 <- bind_rows(final_data_s3, sample_temp_sel)
   
   #Clear X.tmo
-  X.tmp.s3[s,] <-1
+  X.tmp.s3[s,] <-0
   
 }
 

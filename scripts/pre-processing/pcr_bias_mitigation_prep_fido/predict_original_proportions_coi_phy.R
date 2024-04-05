@@ -35,15 +35,25 @@ Y_s1=fido_input_filt%>% as.matrix()
 
 
 #Fit pibble model 
-##MPN: Please remind me how did you choose the 20? Was it using the log marginal likelihood? If so, that code should probably be included here. Happy to chat about this more.
-##MPN: This is assuming the default priors for Theta, upsilon, and Xi. Probably reasonable here, but, may want to look in prior predictive checks
-##Basically, would run this. These first few rows are just setting the defaults (which fido auto does in the line you have)
+#Loop thru values for Gamma
+gamma <- c(1,2,3,5,8,10,15,20,50,100,200,300,400,500,700,1000)
+logML <- rep(NA, length(gamma))
+for(i in 1:length(gamma)){
+  fit <- pibble(Y_s1, X, Gamma = gamma[i]*diag(nrow(X)), n_samples=5000)
+  logML[i] <- fit$logMarginalLikelihood
+  print(i)
+}
+
+plot(gamma, logML, type = "l")
+points(gamma, logML)
+#400 seems good based on LML
+gamma=400
 upsilon <- nrow(Y_s1)+3 
 Omega <- diag(nrow(Y_s1))
 G <- cbind(diag(nrow(Y_s1)-1), -1)
 Xi <- (upsilon-nrow(Y_s1))*G%*%Omega%*%t(G)
 Theta <- matrix(0, nrow(Y_s1)-1, nrow(X))
-priors <- pibble(NULL, X, Gamma = 20*diag(nrow(X)), upsilon = upsilon, Theta = Theta, Xi = Xi, n_samples = 10000)
+priors <- pibble(NULL, X, Gamma = gamma*diag(nrow(X)), upsilon = upsilon, Theta = Theta, Xi = Xi, n_samples = 10000)
 print(priors)
 priors <- to_clr(priors)
 summary(priors, pars="Lambda", gather_prob=TRUE, as_factor=TRUE, use_names=TRUE)  
@@ -51,7 +61,7 @@ summary(priors, pars="Lambda", gather_prob=TRUE, as_factor=TRUE, use_names=TRUE)
 ##end of added code
 
 ##MPN: Note, you had lower case "gamma" the parameter is upper case "Gamma". Fido was using the default here instead of what you supplied.
-fit <- pibble(Y_s1, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
+fit <- pibble(Y_s1, X, Gamma = gamma*diag(nrow(X)), n_samples = 10000)
 
 #Convert to centered log ratio coordinates
 fit_s1 <- to_clr(fit)
@@ -135,7 +145,7 @@ for(s in samples_to_loop$sample){
   final_data_s1 <- bind_rows(final_data_s1, sample_temp_sel)
   
   #Clear X.tmo
-  X.tmp.s1[s,] <-1
+  X.tmp.s1[s,] <-0
   
 }
 
@@ -148,45 +158,9 @@ write.csv(final_data_s1,here(paste0("data/predicted_og/predicted_og_coi_",curren
 
 
 
-##MPN: Are you aggregating over the samples
-final_data_s1 %>% 
-  ggplot(., aes(fill=coord, y=n_reads, x=as.factor(cycle_num))) +
-  geom_bar(position="stack", stat="identity", width=0.5)+
-  scale_fill_discrete(name="ASV")+
-  labs(x="PCR Cycle Number",y="Relative Abundance")+
-  theme_classic()
-## It appears that 'other' is highly over-represented
 
+# 0.5-1 mm ----------------------------------------------------------------
 
-### Maps for Cycle 0 proportions
-#Load complete environmental Metadata file
-metazoo_meta=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv"))%>% 
-  dplyr::select(-c("X")) %>%
-  column_to_rownames("Sample_ID_dot")
-
-metazoo_meta_map=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.2.2023_for_map.csv"))%>% 
-  dplyr::select(-c("X")) %>%
-  column_to_rownames("Sample_ID_dot") %>%
-  mutate(offshore_onshore=metazoo_meta$offshore_onshore)%>%
-  mutate(sample_id = tolower(str_replace_all(Sample_ID_short, "-", "_"))) %>%
-  dplyr::select(Latitude,Longitude) %>%
-  rownames_to_column("sample_id")
-
-
-#Now make a dataframe for mapping and add lat/long
-map_pcr_coi_s1=final_data_s1 %>% filter(cycle_num==0)%>%
-  mutate(sample_id = str_extract(replicate, "(C|CT)\\d+\\.T\\d+\\.H\\d+_S\\d+")) %>%
-  left_join(metazoo_meta_map, by="sample_id")%>%
-  filter(grepl("Calanoida", coord, ignore.case = TRUE))
-
-
-
-
-
-
-############### Let's repeat for other sizes now ###############
-
-############First 0.5-1############
 fido_input_filt=read.csv(file.path("data/fido/phy/fido_coi_s2_ecdf_taxa_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>%
   column_to_rownames("Genus")
 #Metadata
@@ -215,7 +189,7 @@ Omega <- diag(nrow(Y_s2))
 G <- cbind(diag(nrow(Y_s2)-1), -1)
 Xi <- (upsilon-nrow(Y_s2))*G%*%Omega%*%t(G)
 Theta <- matrix(0, nrow(Y_s2)-1, nrow(X))
-priors <- pibble(NULL, X, Gamma = 20*diag(nrow(X)), upsilon = upsilon, Theta = Theta, Xi = Xi, n_samples = 10000)
+priors <- pibble(NULL, X, Gamma = gamma*diag(nrow(X)), upsilon = upsilon, Theta = Theta, Xi = Xi, n_samples = 10000)
 print(priors)
 priors <- to_clr(priors)
 summary(priors, pars="Lambda", gather_prob=TRUE, as_factor=TRUE, use_names=TRUE)  
@@ -223,13 +197,13 @@ summary(priors, pars="Lambda", gather_prob=TRUE, as_factor=TRUE, use_names=TRUE)
 ##end of added code
 
 ##MPN: Note, you had lower case "gamma" the parameter is upper case "Gamma". Fido was using the default here instead of what you supplied.
-fit <- pibble(Y_s2, X, Gamma = 20*diag(nrow(X)), n_samples = 10000)
+fit <- pibble(Y_s2, X, Gamma = gamma*diag(nrow(X)), n_samples = 10000)
 
 #Convert to centered log ratio coordinates
 fit_s2 <- to_clr(fit)
 
 #Convert to Proportions
-fit_prop_1 <- to_proportions(fit_s2)
+fit_prop_2 <- to_proportions(fit_s2)
 
 ############
 #Predict at cycle 0
@@ -257,7 +231,7 @@ for(s in samples_to_loop$sample){
   
   
   #
-  predicted_s2 <- predict(fit_prop_1, newdata=X.tmp.s2, summary=TRUE) %>% 
+  predicted_s2 <- predict(fit_prop_2, newdata=X.tmp.s2, summary=TRUE) %>% 
     mutate(cycle_num = c(0)[sample])%>%
     mutate(size=rep("0.2-0.5mm"))%>%
     mutate(coord = str_replace(coord, "^prop_", "")) %>%
@@ -298,7 +272,7 @@ for(s in samples_to_loop$sample){
   final_data_s2 <- bind_rows(final_data_s2, sample_temp_sel)
   
   #Clear X.tmo
-  X.tmp.s2[s,] <-1
+  X.tmp.s2[s,] <-0
   
 }
 
@@ -310,43 +284,8 @@ current_date <- format(Sys.Date(), "%m_%d_%Y")
 write.csv(final_data_s2,here(paste0("data/predicted_og/predicted_og_coi_",current_date,"_s2_phy.csv")))
 
 
+# 1-2 mm  -----------------------------------------------------------------
 
-##MPN: Are you aggregating over the samples
-final_data_s2 %>% 
-  ggplot(., aes(fill=coord, y=n_reads, x=as.factor(cycle_num))) +
-  geom_bar(position="stack", stat="identity", width=0.5)+
-  scale_fill_discrete(name="ASV")+
-  labs(x="PCR Cycle Number",y="Relative Abundance")+
-  theme_classic()
-## It appears that 'other' is highly over-represented
-
-
-### Maps for Cycle 0 proportions
-#Load complete environmental Metadata file
-metazoo_meta=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv"))%>% 
-  dplyr::select(-c("X")) %>%
-  column_to_rownames("Sample_ID_dot")
-
-metazoo_meta_map=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.2.2023_for_map.csv"))%>% 
-  dplyr::select(-c("X")) %>%
-  column_to_rownames("Sample_ID_dot") %>%
-  mutate(offshore_onshore=metazoo_meta$offshore_onshore)%>%
-  mutate(sample_id = tolower(str_replace_all(Sample_ID_short, "-", "_"))) %>%
-  dplyr::select(Latitude,Longitude) %>%
-  rownames_to_column("sample_id")
-
-
-#Now make a dataframe for mapping and add lat/long
-map_pcr_coi_s2=final_data_s2 %>% filter(cycle_num==0)%>%
-  mutate(sample_id = str_extract(replicate, "(C|CT)\\d+\\.T\\d+\\.H\\d+_S\\d+")) %>%
-  left_join(metazoo_meta_map, by="sample_id")%>%
-  filter(grepl("Calanoida", coord, ignore.case = TRUE))
-
-
-
-
-######### Final size
-##### 1-2mm####
 fido_input_filt=read.csv(file.path("data/fido/phy/fido_coi_s3_ecdf_taxa_phy.csv"), header=TRUE, check.names = FALSE, row.names = 1)%>%
   column_to_rownames("Genus")
 
@@ -366,7 +305,7 @@ X <- t(model.matrix(~ cycle_num+ sample_num  -1, data = meta_coi))
 
 Y_s3=fido_input_filt%>% as.matrix() 
 
-fit <- pibble(Y_s3, X, gamma = 20*diag(nrow(X)), n_samples = 10000)
+fit <- pibble(Y_s3, X, Gamma = gamma*diag(nrow(X)), n_samples = 10000)
 
 # ,Convert to centered log ratio coordinates
 fit_s3 <- to_clr(fit)
@@ -432,7 +371,7 @@ for(s in samples_to_loop$sample){
   final_data_s3 <- bind_rows(final_data_s3, sample_temp_sel)
   
   #Clear X.tmo
-  X.tmp.s3[s,] <-1
+  X.tmp.s3[s,] <-0
   
 }
 
@@ -442,13 +381,10 @@ beepr::beep(7)
 current_date <- format(Sys.Date(), "%m_%d_%Y")
 write.csv(final_data_s3,here(paste0("data/predicted_og/predicted_og_coi_",current_date,"_s3_phy.csv")))
 
-##MPN: Are you aggregating over the samples
-final_data_s3 %>% 
-  ggplot(., aes(fill=coord, y=n_reads, x=as.factor(cycle_num))) +
-  geom_bar(position="stack", stat="identity", width=0.5)+
-  scale_fill_discrete(name="ASV")+
-  labs(x="PCR Cycle Number",y="Relative Abundance")+
-  theme_classic()
+
+
+
+
 
 
 

@@ -1,8 +1,7 @@
 #Zooscan analysis final
-librarian::shelf(tidyverse, googledrive, stringr,here,vegan)
+librarian::shelf(tidyverse, googledrive, stringr,here,vegan,ggpubr)
 here()
 source(here("scripts/Zooscan_analysis/zooscan_functions.R"))
-source("scripts/helpful_functions/phyloseq_mapping_funs.R")
 source("scripts/helpful_functions/general_helper_functions.R")
 
 
@@ -135,6 +134,9 @@ zooscan_by_sample = biomass_map %>%
   mutate(biomass_prop_taxa=dryweight_C_mg_m2_taxa/dryweight_C_mg_m2_sample)
 
 
+
+# Calanoids ---------------------------------------------------------------
+
 #CALANOID DATA FRAME FOR PLOTTING
 zoop_calanoid_by_sample = zooscan_by_sample %>%
   filter(object_annotation_category=="Calanoida")
@@ -147,6 +149,42 @@ zoop_calanoid_by_sample_relative_abundance = relative_abundances_map %>%
 write.csv(zoop_calanoid_by_sample,here("data/Zooscan/zoop_calanoid_by_sample_biomass.csv"))
 write.csv(relative_abundances_map,here("data/Zooscan/zoop_relative_abundance.csv"))
 write.csv(zooscan_by_sample,here("data/Zooscan/zooscan_by_sample_biomass.csv"))
+
+
+
+
+# Euphausiids -------------------------------------------------------------
+#Euphausiid DATA FRAME FOR PLOTTING
+zoop_euphausiid_by_sample = zooscan_by_sample %>%
+  filter(object_annotation_category=="Euphausiacea")
+
+#euphausiid dataframe for relative abundances
+zoop_euphausiid_by_sample_relative_abundance = relative_abundances_map %>%
+  filter(object_annotation_category=="Euphausiacea")
+
+#Save Biomass and relative abundances
+write.csv(zoop_euphausiid_by_sample,here("data/Zooscan/zoop_euphausiid_by_sample_biomass.csv"))
+write.csv(zoop_euphausiid_by_sample_relative_abundance,here("data/Zooscan/zoop_euphausiid_by_sample_relative_abundance.csv"))
+
+
+
+
+# Oithonidae --------------------------------------------------------------
+
+#Euphausiid DATA FRAME FOR PLOTTING
+zoop_euphausiid_by_sample = zooscan_by_sample %>%
+  filter(object_annotation_category=="Euphausiacea")
+
+#euphausiid dataframe for relative abundances
+zoop_euphausiid_by_sample_relative_abundance = relative_abundances_map %>%
+  filter(object_annotation_category=="Euphausiacea")
+
+#Save Biomass and relative abundances
+write.csv(zoop_euphausiid_by_sample,here("data/Zooscan/zoop_euphausiid_by_sample_biomass.csv"))
+write.csv(zoop_euphausiid_by_sample_relative_abundance,here("data/Zooscan/zoop_euphausiid_by_sample_relative_abundance.csv"))
+
+
+
 
 
 ####PLOTTING
@@ -176,9 +214,6 @@ relative_abundances_map %>%
   scale_x_discrete(labels = labels_for_map$Sample_ID_short)->calanoid_props_zooscan
 calanoid_props_zooscan
 
-#Save
-ez_save(calanoid_props_zooscan,"plots/methods_comparison/zooscan_calanoid_relative_abundances.jpeg")
-# ez_save(calanoid_biomass,"plots/Zooscan/zooscan_calanoid_biomass.jpeg")
 
 
 
@@ -211,15 +246,6 @@ zoop_calanoid_by_sample %>%
   scale_x_discrete(labels = labels_for_map$Sample_ID_short)->calanoid_biomass_zooscan
 calanoid_biomass_zooscan
 
-#Save
-# ez_save(calanoid_biomass_zooscan,"plots/methods_comparison/zooscan_calanoid_biomass_scaled.jpeg")
-# ez_save(calanoid_biomass,"plots/Zooscan/zooscan_calanoid_biomass.jpeg")
-ggsave(
-  filename = here("plots/methods_comparison/zooscan_calanoid_biomass_scaled.pdf"), 
-  plot = calanoid_biomass_zooscan,
-  width = 8,  # Width in inches
-  height = 6  # Height in inches
-)
 
 
 #Continuous PC1
@@ -287,37 +313,4 @@ relative_abundances_map %>%
         axis.title = element_text(size = 14),
         strip.text = element_text(size = 14)) +
   scale_x_discrete(labels = labels_for_map$Sample_ID_short) ->z
-z
-
- 
-ggsave(
-  filename = here("plots/methods_comparison/zooscan_relative_abundances.pdf"), 
-  plot = z,
-  width = 8,  # Width in inches
-  height = 6  # Height in inches
-)
-
-taxa_sel=relative_abundances_map
-#PLot maps
-# Load California map data
-worldmap <- map_data("world")
-states <- map_data("state")
-ca_df <- subset(states, region == "california")
-
-
-
-
-ggplot(worldmap) +
-  geom_map(data = worldmap, map = worldmap, aes(map_id=region), col = "white", fill = "gray50") +
-  geom_point(data=taxa_sel, aes(x=Longitude, y=Latitude,size=relative_abundance, color=size_fraction), alpha=0.7)+ 
-  geom_point(data=taxa_sel, aes(x=Longitude, y=Latitude))+
-  #Add point at location of max
-  scale_size(range = c(2,10))+
-  coord_fixed(xlim = c(-134, -119.0),  ylim = c(34, 38), ratio = 1.3)+
-  scale_x_continuous(breaks = seq(-118,-132, by = -2))+
-  xlab("Latitude")+
-  ylab("Longitude")+
-  labs(title="Calanoid Copepod Relative Abundance (Zooscan)")+
-  theme_classic()+
-  facet_wrap(~size_fraction,ncol = 2)
 

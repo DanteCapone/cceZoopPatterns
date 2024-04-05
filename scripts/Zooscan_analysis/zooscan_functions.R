@@ -1,27 +1,29 @@
-#Zooscan functions
+#Zooscan functions for CCE Metabarcoding Paper
 
+
+
+#Load required Libraries
+librarian::shelf(tidyverse, stringr,here, RColorBrewer)
 
 #Read in Zooscan Data, process and 
 readEcotaxa <- function(data) {
   #data: A .tsv file exported from Ecotaxa
   #select relevant columns to calculate data
+  
   #selected columns for database upload
-  data$sample <- data$sample_id
-  data$Haul <- data$sample_id
-  data$Region <- "California Current"
-
-  data$Detail_Location <- data$sample_id
-  data$Comment <- ""
-  data$process_particle_pixel_size_mm <- 0.0106
-  
-  
-  #Caclulate volume filtered to get concentration
-  data =data %>%
-    mutate(sample_conc=acq_sub_part/sample_tot_vol*object_depth_max) %>%
-    mutate(cycle= str_extract(object_id, "^[^_-]+"))
+  data = data %>% 
+    mutate(sample=sample_id,
+           Haul =sample_id,
+           Region ="California Current",
+           Detail_Location =data$sample_id,
+           Comment ="",
+           process_particle_pixel_size_mm =0.0106,
+          #Caclulate volume filtered to get concentration
+          sample_conc=acq_sub_part/sample_tot_vol*object_depth_max,
+          cycle= str_extract(object_id, "^[^_-]+"))
   
   #Select relevant columns
-  data_select <- data %>% dplyr::select(., sample_ship, sample_program, sample_id, Haul, Region, Detail_Location, Comment, 
+  data_select =data %>% dplyr::select(., sample_ship, sample_program, sample_id, Haul, Region, Detail_Location, Comment, 
                                                   object_date, object_time, object_lat, object_lon, sample_bottomdepth, object_depth_min,
                                                   object_depth_max, object_annotation_category, object_annotation_hierarchy, object_annotation_person_name,
                                                   sample, object_id, sample_id, sample_tot_vol, acq_sub_part,object_feret, 
@@ -34,21 +36,25 @@ readEcotaxa <- function(data) {
   
   
   #Convert to mm for calculating ESD
-  data_select$area_mm2  <- data_select$object_area * (data_select$process_particle_pixel_size_mm**2) 
+  data_select = data_select %>% 
+    mutate(area_mm2=object_area * (process_particle_pixel_size_mm**2),
+           major_mm  = object_major * process_particle_pixel_size_mm,
+           
+           minor_mm  = object_minor * process_particle_pixel_size_mm,
+           
+           area_exc_mm2  = object_area_exc * (process_particle_pixel_size_mm**2),
+           
+           area_majmin_mm2  = pi * major_mm/2 * minor_mm/2,
+           
+           esd_mm  = 2 * (sqrt(area_mm2/pi)),
+           
+           esd_exc_mm  = 2 * (sqrt(area_exc_mm2/pi)),
+           
+           esd_maj_min_mm = 2 * (sqrt(area_majmin_mm2/pi))
+           
+    )
   
-  data_select$major_mm  <- data_select$object_major * data_select$process_particle_pixel_size_mm
-  
-  data_select$minor_mm  <- data_select$object_minor * data_select$process_particle_pixel_size_mm
-  
-  data_select$area_exc_mm2  <- data_select$object_area_exc * (data_select$process_particle_pixel_size_mm**2) 
-  
-  data_select$area_majmin_mm2  <- pi * data_select$major_mm/2 * data_select$minor_mm/2
-  
-  data_select$esd_mm  <- 2 * (sqrt(data_select$area_mm2/pi))
-  
-  data_select$esd_exc_mm  <- 2 * (sqrt(data_select$area_exc_mm2/pi))
-  
-  data_select$esd_maj_min_mm <- 2 * (sqrt(data_select$area_majmin_mm2/pi))
+
   
   print(unique(data_select$object_annotation_category))
   
@@ -73,7 +79,9 @@ readEcotaxa <- function(data) {
 }
 
 
-#Convert Zooscan measurement to C
+#Function to Convert Zooscan measurement to Carbon Biomass
+# USe equations from Laveniegos and Ohman which use length-carbon regressions
+# Many Use total length which 
 transform_by_taxa_group <- function(df, length_type) {
   
   if (length_type == "esd"){
@@ -84,11 +92,11 @@ transform_by_taxa_group <- function(df, length_type) {
     object_annotation_category=="Harpacticoida" ~ copepods_pl(esd_mm),
     object_annotation_category=="Poecilostomatoida" ~ copepods_pl(esd_mm),
     object_annotation_category=="Eucalanidae" ~ copepods_pl(esd_mm),
-    object_annotation_category=="Euphausiacea" ~ euphausiids_tl(esd_mm ),
+    object_annotation_category=="Euphausiacea" ~ euphausiids(esd_mm ),
     object_annotation_category=="Hydrozoa" ~ hydrozoans_tl(esd_mm),
     object_annotation_category=="Polychaeta" ~ polychaetes_tl(esd_mm),
     object_annotation_category=="Ostracoda" ~ ostracods_tl(esd_mm),
-    object_annotation_category=="Eumalacostraca" ~ decapods_tl(esd_mm),
+    object_annotation_category=="Eumalacostraca" ~ crustacea_other_tl(esd_mm),
     object_annotation_category=="tetrazoid" ~ pyrosomes(esd_mm),
     object_annotation_category=="Salpida" ~ salps(esd_mm),
     object_annotation_category=="Hyperiidea" ~ hyperiids_tl(esd_mm),
@@ -109,7 +117,7 @@ transform_by_taxa_group <- function(df, length_type) {
       object_annotation_category=="Hydrozoa" ~ hydrozoans(object_feret),
       object_annotation_category=="Polychaeta" ~ polychaetes(object_feret),
       object_annotation_category=="Ostracoda" ~ ostracods(object_feret),
-      object_annotation_category=="Eumalacostraca" ~ decapods(object_feret),
+      object_annotation_category=="Eumalacostraca" ~ crustacea_other(object_feret),
       object_annotation_category=="tetrazoid" ~ pyrosomes(object_feret),
       object_annotation_category=="Salpida" ~ salps(object_feret),
       object_annotation_category=="Hyperiidea" ~ hyperiids(object_feret),
@@ -136,7 +144,7 @@ transform_by_taxa_group <- function(df, length_type) {
         object_annotation_category=="Hydrozoa" ~ hydrozoans(object_feret ),
         object_annotation_category=="Polychaeta" ~ polychaetes(object_feret ),
         object_annotation_category=="Ostracoda" ~ ostracods(object_feret ),
-        object_annotation_category=="Eumalacostraca" ~ decapods(object_feret ),
+        object_annotation_category=="Eumalacostraca" ~ crustacea_other(object_feret ),
         object_annotation_category=="tetrazoid" ~ pyrosomes(object_feret ),
         object_annotation_category=="Salpida" ~ salps(object_feret ),
         object_annotation_category=="Hyperiidea" ~ hyperiids(object_feret ),
@@ -153,6 +161,7 @@ transform_by_taxa_group <- function(df, length_type) {
 }
 
 #Taxon-specific functions for biomass from Laveniegos and Ohman 2007
+# '_pl' or _tl' converts to total length from ESD Cornilis et al. 2022
 copepods <- function(ESD) {
   log_C_microgram <- -6.76 + 2.512 * log10(ESD*1000)
   C_ug=10^(log_C_microgram)
@@ -221,8 +230,8 @@ hyperiids_tl <- function(ESD) {
   return(C_ug)
 }
 
-## Need to check this
-decapods <- function(ESD) {
+#Use average from decapod groups and TL conversion from Crustacea
+crustacea_other <- function(ESD) {
   coefs=mean(0.133,0.322,0.810)
   exps=mean(2.44,2.31,1.77)
   C_mg =coefs*(ESD)^exps
@@ -231,7 +240,8 @@ decapods <- function(ESD) {
   return(C_ug)
 }
 
-decapods_tl <- function(ESD) {
+#Use average from decapod groups and TL conversion from Crustacea
+crustacea_other_tl <- function(ESD) {
   a=0.064
   b=1.7
   TL=ESD/b-a
@@ -263,6 +273,7 @@ doliolids<- function(ESD) {
   return(C_ug)
 }
 
+#USe average from all salp measurements
 salps<- function(ESD) {
   coefs=mean(10.91,5.10,1.00,0.47,0.20,3.00,1.40,1.01,1.62)
   exps=mean(1.54,1.75,2.26,2.22,2.60,1.81,2.05,2.06,1.93)
@@ -326,4 +337,10 @@ hydrozoans_tl<- function(ESD) {
 }
 
 
+#References
+# Cornils, A. et al. (2022) ‘Testing the usefulness of optical data for zooplankton long-term monitoring: Taxonomic composition, abundance, biomass, and size spectra from ZooScan image analysis’, 
+# Limnology and Oceanography: Methods, 20(7), pp. 428–450. Available at: https://doi.org/10.1002/lom3.10495.
+
+# Lavaniegos, B.E. and Ohman, M.D. (2007) ‘Coherence of long-term variations of zooplankton in two sectors of the California Current System’, 
+# Progress in Oceanography, 75(1), pp. 42–69. Available at: https://doi.org/10.1016/j.pocean.2007.07.002.
 
