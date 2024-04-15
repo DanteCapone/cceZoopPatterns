@@ -35,10 +35,19 @@ fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_order_phy.csv"), h
   
   
   #Fit pibble model 
-  ##MPN: Please remind me how did you choose the 20? Was it using the log marginal likelihood? If so, that code should probably be included here. Happy to chat about this more.
-  ##MPN: This is assuming the default priors for Theta, upsilon, and Xi. Probably reasonable here, but, may want to look in prior predictive checks
-  ##Basically, would run this. These first few rows are just setting the defaults (which fido auto does in the line you have)
-  gamma=400
+  #Loop thru values for Gamma
+  gamma <- c(1,2,3,5,8,10,15,20,50,100,200,300,400,500,700,1000)
+  logML <- rep(NA, length(gamma))
+  for(i in 1:length(gamma)){
+    fit <- pibble(Y_s1, X, Gamma = gamma[i]*diag(nrow(X)), n_samples=5000)
+    logML[i] <- fit$logMarginalLikelihood
+    print(i)
+  }
+  
+  plot(gamma, logML, type = "l")
+  points(gamma, logML)
+  #20 seems good based on LML
+  gamma=20
   upsilon <- nrow(Y_s1)+3 
   Omega <- diag(nrow(Y_s1))
   G <- cbind(diag(nrow(Y_s1)-1), -1)
@@ -67,8 +76,7 @@ fido_input_filt=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_order_phy.csv"), h
 
 
 #Select sample to predict on
-#Sample select
-sample_sel="sample_numC1.T7.H9_S1"
+
 
 
 
@@ -343,4 +351,29 @@ current_date <- format(Sys.Date(), "%m_%d_%Y")
 write.csv(final_data_s3,here(paste0("data/predicted_og/predicted_og_18s_",current_date,"_s3_phy_order.csv")))
 
 
+
+#Archive older files
+# Directory containing the files
+file_dir <- here("data/predicted_og")
+
+# Get a list of files in the directory
+files <- list.files(file_dir, pattern = "predicted_og_18s_", full.names = TRUE)
+
+# Archive files with an older date
+for (file in files) {
+  date_str <- str_extract(basename(file), "(?<=predicted_og_18s_)[0-9_]+(?=_s\\d_phy_order\\.csv)")
+  if (!is.na(date_str) && date_str != "") {
+    # Convert the date string from format mm_dd_yyyy to Date object
+    file_date <- as.Date(date_str, format = "%m_%d_%Y")
+    if (!is.na(file_date) && file_date < as.Date(current_date, "%m_%d_%Y")) {
+      # Check if the "past" directory exists, create it if it doesn't
+      past_dir <- file.path(file_dir, "past")
+      if (!dir.exists(past_dir)) {
+        dir.create(past_dir)
+      }
+      # Move the file to the "past" directory
+      file.rename(file, file.path(past_dir, basename(file)))
+    }
+  }
+}
 

@@ -22,23 +22,15 @@ asv18s_run2=read.csv(here("data/past/","ASV_table_18s_run2.csv")) %>%
 
 
 #Taxa Tables 
-taxa_18s_meta=read.csv(here("data/past/metazoopruned18s_tax.csv"))%>%
+taxa_18s=read.csv(here("data/taxa_files/blast_metazoo_18s.csv"))%>%
+  select(-X) %>% 
   mutate(non_na_count = rowSums(!is.na(select(., -Hash)))) %>%
   group_by(Hash) %>%
   filter(rank(desc(non_na_count)) == 1) %>%
   select(-non_na_count) %>%
-  ungroup() 
-
-#BlAST
-taxa_18s_blast=read.csv(here("data/raw_data/BLAST_taxa_class/zhang_taxa.csv")) %>%
-  distinct(Hash, .keep_all = TRUE)
-
-taxa_18s=taxa_18s_meta %>% 
-  left_join(taxa_18s_blast,., by="Hash") %>%
-  select(-contains(".x")) %>%
-  rename_all(~gsub("\\.y", "", .)) %>% 
+  ungroup() %>% 
+  #Replace Orders that are empty with 'other'
   mutate_all(~replace_na(., "other")) %>% 
-  mutate(Hash = if_else(Order == "other", "other", Hash)) %>% 
   distinct() %>% 
   column_to_rownames("Hash")
 
@@ -139,10 +131,12 @@ fido_18s_s1_order=tax_glom(fido_18s_s1_phy, taxrank = "Order")
 #Check colsums
 # Calculate column sums before tax glomming
 colsums_before <- colSums((fido_18s_s1))
-
+colsums_before[1:5]
 # Calculate column sums after tax glomming
 colsums_after <- colSums(otu_table(fido_18s_s1_order))
-
+colsums_after[1:5]
+colsums_before == colsums_after
+#Soem columns are different
 # Find the difference
 difference <- colsums_before - colsums_after %>%
   t() %>% 
@@ -177,16 +171,13 @@ data.frame(
 fido_18s_s2_phy=phyloseq(fido_18s_s2_otu,tax18s_s2, metadata)
 fido_18s_s2_order=tax_glom(fido_18s_s2_phy, taxrank = "Order")
 
-
-
-
 #Check colsums
 # Calculate column sums before tax glomming
 colsums_before <- colSums((fido_18s_s2))
-
+colsums_before[1:5]
 # Calculate column sums after tax glomming
 colsums_after <- colSums(otu_table(fido_18s_s2_order))
-
+colsums_after[1:5]
 # Find the difference
 difference <- colsums_before - colsums_after %>%
   t() %>% 
@@ -196,7 +187,8 @@ difference <- colsums_before - colsums_after %>%
 
 
 #Make inputs for filtering
-fido_18s_s2_order_otu=otu_table(fido_18s_s2_order) %>% as.data.frame()
+fido_18s_s2_order_otu=otu_table(fido_18s_s2_order) %>% as.data.frame() 
+
 fido_18s_s2_order_taxa=tax_table(fido_18s_s2_order) %>% as.data.frame() 
 
 # Add the new difference row to the dataframe
@@ -205,11 +197,6 @@ fido_18s_s2_order_otu <- bind_rows(fido_18s_s2_order_otu, difference)
 
 colSums(fido_18s_s2_otu)[1:5]
 colSums(fido_18s_s2_order_otu)[1:5]
-
-
-#Make inputs for filtering
-fido_18s_s2_order_otu=otu_table(fido_18s_s2_order) %>% as.data.frame()
-fido_18s_s2_order_taxa=tax_table(fido_18s_s2_order) %>% as.data.frame()
 
 #Need to add 'other' row to taxa table
 data.frame(
@@ -220,19 +207,17 @@ data.frame(
   rbind(.,fido_18s_s2_order_taxa) -> fido_18s_s2_order_taxa
 
 
-
 # S3 ----------------------------------------------------------------------
 fido_18s_s3_phy=phyloseq(fido_18s_s3_otu,tax18s_s3, metadata)
 fido_18s_s3_order=tax_glom(fido_18s_s3_phy, taxrank = "Order")
 
-
 #Check colsums
 # Calculate column sums before tax glomming
 colsums_before <- colSums((fido_18s_s3))
-
+colsums_before[1:5]
 # Calculate column sums after tax glomming
 colsums_after <- colSums(otu_table(fido_18s_s3_order))
-
+colsums_after[1:5]
 # Find the difference
 difference <- colsums_before - colsums_after %>%
   t() %>% 
@@ -253,12 +238,6 @@ fido_18s_s3_order_otu <- bind_rows(fido_18s_s3_order_otu, difference)
 colSums(fido_18s_s3_otu)[1:5]
 colSums(fido_18s_s3_order_otu)[1:5]
 
-
-
-#Make inputs for filtering
-fido_18s_s3_order_otu=otu_table(fido_18s_s3_order) %>% as.data.frame()
-fido_18s_s3_order_taxa=tax_table(fido_18s_s3_order) %>% as.data.frame()
-
 #Need to add 'other' row to taxa table
 data.frame(
   row_name = "other",
@@ -271,27 +250,61 @@ data.frame(
 tax18s_order=rbind(fido_18s_s1_order_taxa,fido_18s_s2_order_taxa,fido_18s_s3_order_taxa) %>%
   unique() %>%
   mutate(
-    Kingdom = if_else(Order == 'other', 'other', Kingdom),
     Phylum = if_else(Order == 'other', 'other', Phylum),
     Subphylum = if_else(Order == 'other', 'other', Subphylum),
     Class = if_else(Order == 'other', 'other', Class),
     Subclass = if_else(Order == 'other', 'other', Subclass),
     Superorder = if_else(Order == 'other', 'other', Superorder),
   ) %>% 
-  select(-Species, -Genus, -Family)
+  rownames_to_column("Hash") %>% 
+  select(-Species, -Genus, -Family,-Hash,-Superorder,-Subclass,-Subphylum) %>% 
+  distinct() 
 write.csv(tax18s_order,here("data/phyloseq_bio_data/18S/fido_18s_order_tax_table.csv"))
 
+
+
+
+# Filtration based on Calibration Samples ---------------------------------
 
 
 ## ==== S1 ====
 # Separate rows based appearance in the calibration samples
 fido_taxa_filt <- fido_18s_s1_order_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2) %>%
   rownames_to_column("Hash")
+
+
 other <- fido_18s_s1_order_otu %>%
   anti_join(fido_18s_s1_order_otu %>%
-              filter(rowSums(select(., 1:9) == 0) <= 2))%>%
+              filter(rowSums(select(., 1:9) == 0) <= 2)) 
+
+
+#Check composition before proceeding
+
+#The other here would be Orders that weren't identified to that level, as with the NA
+other %>% 
+  rownames_to_column("Hash")%>% 
+  left_join(taxa_18s %>% rownames_to_column("Hash") %>% 
+              select(Hash,Order), by = "Hash") %>%
+  select(-Hash) %>% 
+  pivot_longer(cols = -Order, names_to = "Category", values_to = "Value") %>%
+  group_by(Order, Category) %>%
+  summarize(Total = sum(Value), .groups = 'drop') %>% 
+  ggplot(., aes(x = Category, y = Total, fill = Order)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Stacked Bar Plot by Order",
+       x = "Order",
+       y = "Sum of Values",
+       fill = "Category")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> other_check_p1
+
+
+other %>% 
   summarise_all(sum) %>% 
-  mutate(Hash = "other")
+  mutate(Hash = "other")->other
+  
+  
+  
 
 # Combine data
 fido_18s_s1_final <- rbind(fido_taxa_filt,other)  %>% 
@@ -321,11 +334,36 @@ write.csv(fido_18s_s1_save_order_phy,here("data/fido/phy/fido_18s_s1_ecdf_order_
 ## ==== s2 ====
 fido_taxa_filt <- fido_18s_s2_order_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2) %>%
   rownames_to_column("Hash")
+
 other <- fido_18s_s2_order_otu %>%
-  anti_join(fido_18s_s2_order_otu %>%
-              filter(rowSums(select(., 1:9) == 0) <= 2))%>%
+  anti_join(fido_18s_s1_order_otu %>%
+              filter(rowSums(select(., 1:9) == 0) <= 2)) 
+
+
+#Check composition before proceeding
+
+#The other here would be Orders that weren't identified to that level, as with the NA
+other %>% 
+  rownames_to_column("Hash")%>% 
+  left_join(taxa_18s %>% rownames_to_column("Hash") %>% 
+              select(Hash,Order), by = "Hash") %>%
+  select(-Hash) %>% 
+  pivot_longer(cols = -Order, names_to = "Category", values_to = "Value") %>%
+  group_by(Order, Category) %>%
+  summarize(Total = sum(Value), .groups = 'drop') %>% 
+  ggplot(., aes(x = Category, y = Total, fill = Order)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Stacked Bar Plot by Order",
+       x = "Order",
+       y = "Sum of Values",
+       fill = "Category")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> other_check_p2
+other_check_p2
+
+other %>% 
   summarise_all(sum) %>% 
-  mutate(Hash = "other")
+  mutate(Hash = "other")->other
 
 # Combine data
 fido_18s_s2_final <- rbind(fido_taxa_filt,other)  %>% 
@@ -346,18 +384,44 @@ fido_18s_s2_final %>%
 #Save
 write.csv(fido_18s_s2_save_order_phy,here("data/fido/phy/fido_18s_s2_ecdf_order_phy.csv"))
 
-
+rm(other)
 
 
 
 ## ==== s3 ====
 fido_taxa_filt <- fido_18s_s3_order_otu %>% filter(rowSums(select(., 1:9) == 0) <= 2) %>%
   rownames_to_column("Hash")
+
+
 other <- fido_18s_s3_order_otu %>%
-  anti_join(fido_18s_s3_order_otu %>%
-              filter(rowSums(select(., 1:9) == 0) <= 2))%>%
+  anti_join(fido_18s_s1_order_otu %>%
+              filter(rowSums(select(., 1:9) == 0) <= 2)) 
+
+
+#Check composition before proceeding
+
+#The other here would be Orders that weren't identified to that level, as with the NA
+other %>% 
+  rownames_to_column("Hash")%>% 
+  left_join(taxa_18s %>% rownames_to_column("Hash") %>% 
+              select(Hash,Order), by = "Hash") %>%
+  select(-Hash) %>% 
+  pivot_longer(cols = -Order, names_to = "Category", values_to = "Value") %>%
+  group_by(Order, Category) %>%
+  summarize(Total = sum(Value), .groups = 'drop') %>% 
+  ggplot(., aes(x = Category, y = Total, fill = Order)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Stacked Bar Plot by Order",
+       x = "Order",
+       y = "Sum of Values",
+       fill = "Category")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> other_check_p3
+
+
+other %>% 
   summarise_all(sum) %>% 
-  mutate(Hash = "other")
+  mutate(Hash = "other")->other
 
 # Combine data
 fido_18s_s3_final <- rbind(fido_taxa_filt,other)  %>% 
@@ -377,3 +441,9 @@ fido_18s_s3_final %>%
 #Save
 write.csv(fido_18s_s3_save_order_phy,here("data/fido/phy/fido_18s_s3_ecdf_order_phy.csv"))
 
+
+# Visualize Other composition
+
+other_check_p1
+other_check_p2
+other_check_p3
