@@ -62,20 +62,21 @@ if(taxa_level=="Family"){
 #Using family
 
 #Taxa file from pre-processed fido families for 18S
-zhan_taxa=read.csv(here("data/phyloseq_bio_data/18S/fido_18s_family_tax_table.csv")) %>% 
-  mutate(Hash=X) %>%
-  select(-Hash,-X) %>% 
+zhan_taxa=read.csv(here("data/phyloseq_bio_data/18S/fido_18s_family_tax_table.csv"))  %>% 
+  #Filter weird taxa
+  filter(!(Family == "Corycaeidae" & Order =="Cyclopoida")) %>% 
+  select(-X) %>% 
   distinct() %>% 
   column_to_rownames("Family")
 
 
 #===== PCR Bias Mitigated Proportion Data
 #Predicted proportions
-fido_s1=read.csv(here("data/predicted_og/predicted_og_18s_04_04_2024_s1_phy.csv")) %>%
+fido_s1=read.csv(here("data/predicted_og/predicted_og_18s_04_18_2024_s1_phy_all_and_subpools.csv")) %>%
   select(-X)
-fido_s2=read.csv(here("data/predicted_og/predicted_og_18s_04_04_2024_s2_phy.csv")) %>%
+fido_s2=read.csv(here("data/predicted_og/predicted_og_18s_04_18_2024_s2_phy_all_and_subpools.csv")) %>%
   select(-X)
-fido_s3=read.csv(here("data/predicted_og/predicted_og_18s_04_04_2024_s3_phy.csv")) %>%
+fido_s3=read.csv(here("data/predicted_og/predicted_og_18s_04_18_2024_s3_phy_all_and_subpools.csv")) %>%
   select(-X)
 #Merge
 final_data_all_sizes=rbind(fido_s1,fido_s2,fido_s3) %>%
@@ -92,7 +93,7 @@ phy_taxa_pcr= final_data_all_sizes %>%
 #Filter to calanoida
 taxa_pcr=phy_taxa_pcr %>% mutate(Family=taxa) %>%
   left_join(.,zhan_taxa %>% rownames_to_column("Family"), by="Family") %>%
-  filter(Order=="Calanoida")
+  filter(Order=="Calanoida") 
 
 
 #PCR-RA df ready to join with RRA
@@ -115,11 +116,11 @@ if(taxa_level=="Order"){
   
   #===== PCR Bias Mitigated Proportion Data
   #Predicted proportions
-  fido_s1=read.csv(here("data/predicted_og/predicted_og_18s_04_03_2024_s1_phy_order.csv")) %>%
+  fido_s1=read.csv(here("data/predicted_og/predicted_og_18s_04_16_2024_s1_phy.csv")) %>%
     select(-X)
-  fido_s2=read.csv(here("data/predicted_og/predicted_og_18s_04_03_2024_s2_phy_order.csv")) %>%
+  fido_s2=read.csv(here("data/predicted_og/predicted_og_18s_04_16_2024_s2_phy.csv")) %>%
     select(-X)
-  fido_s3=read.csv(here("data/predicted_og/predicted_og_18s_04_03_2024_s3_phy_order.csv")) %>%
+  fido_s3=read.csv(here("data/predicted_og/predicted_og_18s_04_16_2024_s3_phy.csv")) %>%
     select(-X)
   #Merge
   final_data_all_sizes=rbind(fido_s1,fido_s2,fido_s3) %>%
@@ -135,7 +136,7 @@ if(taxa_level=="Order"){
   
   #Filter to calanoida
   taxa_pcr=phy_taxa_pcr %>% mutate(Order=taxa) %>%
-    left_join(.,zhan_taxa %>% rownames_to_column("Order"), by="Order") %>%
+    left_join(.,zhan_taxa %>% rownames_to_column("Family"), by="Family") %>%
     filter(Order=="Calanoida")
 
 
@@ -153,7 +154,7 @@ pcr_join=taxa_pcr %>%
 # =========== Raw Reads Realtive Abundance Data using taxa that went into fido model
 
 #Predicted proportions
-fido_s1_raw=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv")) %>% 
+fido_s1_raw=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy_all_subpools.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -163,7 +164,7 @@ fido_s1_raw=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv")) %>%
   pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
 
 
-fido_s2_raw=read.csv(here("data/fido/phy/fido_18s_s2_ecdf_family_phy.csv")) %>% 
+fido_s2_raw=read.csv(here("data/fido/phy/fido_18s_s2_ecdf_family_phy_all_subpools.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -173,7 +174,7 @@ fido_s2_raw=read.csv(here("data/fido/phy/fido_18s_s2_ecdf_family_phy.csv")) %>%
   pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
 
 
-fido_s3_raw=read.csv(here("data/fido/phy/fido_18s_s3_ecdf_family_phy.csv")) %>% 
+fido_s3_raw=read.csv(here("data/fido/phy/fido_18s_s3_ecdf_family_phy_all_subpools.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -216,7 +217,7 @@ taxa_raw %>%
   summarise(n_reads_raw=sum(n_reads), biomass_mg_m2=mean(biomass_mg_m2)) %>%  
   left_join(pcr_join, by="Sample_ID") %>%
   select(-size_fraction.x) %>%
-  mutate(size_fraction=size_fraction.y)->pcr_and_raw
+  mutate(size_fraction=size_fraction.y)->pcr_and_raw_18s
 
 #Add difference column
 # pcr_and_raw_18s=pcr_and_raw %>%
@@ -257,18 +258,24 @@ size_mapping <- c("0.2-0.5" = 0.2, "0.5-1" = 0.5, "1-2" = 1, ">2" = 5)
 zoo_metric="biomass_prop"
 
 if (zoo_metric=="biomass_prop"){
-zooscan_by_sample=read.csv(here("data/Zooscan/zoop_calanoid_by_sample_biomass.csv")) %>%
-  select(-X) %>%
+  
+  #Add biomass sum, calanoid biomass and proportion of calanoid biomass
+  taxa_sel="Calanoida"
+  zooscan_taxa=zooscan_by_sample  
+  
+  
+zooscan_by_sample=read.csv(here("data/Zooscan/zoop_calanoid_by_sample_biomass.csv"))%>%
+  filter(object_annotation_category=="Calanoida")  %>%
+  # mutate(biomass_prop_taxa=dryweight_C_mg_m2_taxa) %>%
+  select(-X) %>% 
   mutate(Sample_ID=sample_id) %>%
   mutate(size_fraction = case_when(
     size_fraction %in% names(size_mapping) ~ size_mapping[size_fraction],
     TRUE ~ NA_real_)) %>%
-  group_by(Sample_ID)
+  group_by(Sample_ID) %>% 
+  left_join(.,env_metadata, by=c("PC1","size_fraction")) 
 
-#Add biomass sum, calanoid biomass and proportion of calanoid biomass
-taxa_sel="Calanoida"
-zooscan_taxa=zooscan_by_sample %>%
-  filter(object_annotation_category=="Calanoida")  
+
 
 }
 
@@ -330,11 +337,12 @@ pcr_raw_zoo_18s_long <- pivot_longer(pcr_raw_zoo_18s,
 #Plot grouped bar plot
 labels_for_map=pcr_raw_zoo_18s %>% 
   ungroup()%>%
-  select(Sample_ID_short,PC1) %>%
+  select(Sample_ID_short.x,PC1) %>%
   unique(.) %>%
   arrange((PC1))
 
 pcr_raw_zoo_18s_long %>%
+  # filter(Method=="biomass_prop_taxa") %>% 
   ggplot(., aes(x = as.factor(PC1), y = relative_abundance, fill = Method)) +
   geom_bar(stat = "identity", position = "dodge") +
   # geom_point(position = position_dodge(width = 0.9), aes(shape = Method), size = 3) +  # Add points
@@ -356,11 +364,12 @@ pcr_raw_zoo_18s_long %>%
   # geom_errorbar(aes(ymin = p.2.5, ymax = p.97.5), position = position_dodge(width = 0.9), width = 0.25) +
   scale_shape_manual(values = c(16, 17, 18)) +  # Define shapes for each Method
   scale_linetype_manual(values = c("solid", "dashed", "dotted")) + 
-  scale_x_discrete(labels = labels_for_map$Sample_ID_short)+# Define linetypes for each Method
+  scale_x_discrete(labels = labels_for_map$Sample_ID_short.x)+# Define linetypes for each Method
   scale_color_manual(values = c("#70BF41", "#4F86F7", "#F78D4F")) -> grouped_bar_all_18s  # Define colors for each Method
 
 grouped_bar_all_18s
 
+saving=1
 if (saving==1) {
   
   if(zoo_metric=="relative_abundances"){
@@ -448,7 +457,7 @@ pcr_raw_zoo_18s %>%
   scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   # geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
-  # facet_wrap(~size_fraction, nrow=3) +
+  # facet_wrap(~cycle.y, nrow=3) +
   labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "PCR Bias-Mitigated Relative Abundance (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
   ggtitle("pearson Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance")+
   stat_cor(method = "pearson", label.x = 0.1, label.y = 1.3)+
@@ -460,9 +469,10 @@ pcr_raw_zoo_18s %>%
         strip.text = element_text(size = 14))->zoo_vs_pcr
 zoo_vs_pcr
 
+
 if (saving==1) {
 ggsave(
-  filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_size.pdf"),
+  filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s.pdf"),
   # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_cycle.pdf"),
   # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_clust.pdf"),
   # filename = here("plots/methods_comparison/grouped_bar_relative_abundance_diff_sig_diffs.pdf"), 
@@ -472,7 +482,7 @@ ggsave(
 )
 
 ggsave(
-  filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_size.png"),
+  filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s.png"),
   # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_cycle.png"),
   # filename = here("plots/methods_comparison/zooscan_vs_pcr_correlation_18s_clust.png"),
   plot = zoo_vs_pcr,
@@ -495,7 +505,7 @@ pcr_raw_zoo_18s %>%
   ggtitle("pearson Correlation between Zooscan Biomass Proportion and Raw Relative Abundance")+
   stat_cor(method = "pearson", label.x = 0.1, label.y = 1.5)+
   guides(size = FALSE, fill=FALSE) +
-  # facet_wrap(~size_fraction, nrow=3) +
+  # facet_wrap(~offshore_onshore, nrow=3) +
   theme_classic()+
   theme(axis.text.x = element_text(hjust = 1, size = 12),
         axis.text.y = element_text(size = 12),
@@ -506,7 +516,7 @@ zoo_vs_raw
 
 if (saving==1) {
 ggsave(
-  filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_size.pdf"),
+  filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s.pdf"),
   # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_cycle.pdf"),
   # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_clust.pdf"),
   # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_cycle.pdf"),
@@ -516,7 +526,7 @@ ggsave(
 )
 
 ggsave(
-  filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_size.png"),
+  filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s.png"),
   # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_cycle.png"),
   # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_clust.png"),
   # filename = here("plots/methods_comparison/zooscan_vs_raw_correlation_18s_clust.png"),
@@ -532,7 +542,7 @@ ggsave(
 pcr_raw_zoo_18s %>%
   filter(!is.na(cycle.y))%>%
   # filter(cycle.y=="1") %>%
-  ggplot(.,aes(x=n_reads_pcr, y=n_reads_raw))+
+  ggplot(.,aes(x=asin(sqrt(n_reads_pcr)), y=asin(sqrt(n_reads_raw))))+
   geom_point(aes(shape=cycle.y, size=8,color=as.factor(size_fraction),fill=as.factor(size_fraction)))+
   scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
   scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
@@ -540,7 +550,7 @@ pcr_raw_zoo_18s %>%
   # geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
   labs(x = "PCR Bias-Mitigated Relative Abundance", y = "Raw Reads Relative Abundance", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
   ggtitle("pearson Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance")+
-  stat_cor(method = "pearson", label.x = 0.1, label.y = 0.2)+
+  stat_cor(method = "pearson", label.x = 0.1, label.y = 1.5)+
   guides(size = FALSE, fill=FALSE) +
   theme_classic()+
   theme(axis.text.x = element_text(hjust = 1, size = 12),
@@ -603,15 +613,16 @@ plot(ancova_result_18s_pcr) # Plot diagnostic plots
 
 
 #Predicted proportions
-fido_s1=read.csv(here("data/predicted_og/predicted_og_coi_04_04_2024_s1_phy.csv")) %>%
+fido_s1=read.csv(here("data/predicted_og/predicted_og_coi_04_17_2024_s1_phy_all_and_subpools.csv")) %>%
   select(-X)
-fido_s2=read.csv(here("data/predicted_og/predicted_og_coi_04_04_2024_s2_phy.csv")) %>%
+fido_s2=read.csv(here("data/predicted_og/predicted_og_coi_04_17_2024_s2_phy_all_and_subpools.csv")) %>%
   select(-X)
-fido_s3=read.csv(here("data/predicted_og/predicted_og_coi_04_04_2024_s3_phy.csv")) %>%
+fido_s3=read.csv(here("data/predicted_og/predicted_og_coi_04_17_2024_s3_phy_all_and_subpools.csv")) %>%
   select(-X)
-
+#Merge
 final_data_all_sizes=rbind(fido_s1,fido_s2,fido_s3) %>%
   mutate(Sample_ID = str_extract(replicate, "(?<=predicted )\\S+")) 
+
 
 #All merged
 phy_pcr= final_data_all_sizes %>%
@@ -646,7 +657,7 @@ coi_taxa=read.csv(here("data/phyloseq_bio_data/COI/fido_coi_genus_tax_table.csv"
 
 
 #Predicted proportions
-fido_s1_raw=read.csv(here("data/fido/phy/fido_coi_s1_ecdf_taxa_phy.csv")) %>% 
+fido_s1_raw=read.csv(here("data/fido/phy/fido_coi_s1_ecdf_genus_phy_all_subpools.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Genus, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -656,7 +667,7 @@ fido_s1_raw=read.csv(here("data/fido/phy/fido_coi_s1_ecdf_taxa_phy.csv")) %>%
   pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
 
 
-fido_s2_raw=read.csv(here("data/fido/phy/fido_coi_s2_ecdf_taxa_phy.csv")) %>% 
+fido_s2_raw=read.csv(here("data/fido/phy/fido_coi_s2_ecdf_genus_phy_all_subpools.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Genus, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -666,7 +677,7 @@ fido_s2_raw=read.csv(here("data/fido/phy/fido_coi_s2_ecdf_taxa_phy.csv")) %>%
   pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
 
 
-fido_s3_raw=read.csv(here("data/fido/phy/fido_coi_s3_ecdf_taxa_phy.csv")) %>% 
+fido_s3_raw=read.csv(here("data/fido/phy/fido_coi_s3_ecdf_genus_phy_all_subpools.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Genus, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -820,24 +831,12 @@ pcr_raw_zoo_coi_long <- pivot_longer(pcr_raw_zoo_coi,
 
 
 
-# ANOVA test
-anova_result <- aov(relative_abundance ~ Method * as.factor(PC1), data = pcr_raw_zoo_coi_long)
-anova_summary <- summary(anova_result)
-print(anova_summary)
 
-# Kruskal-Wallis test (non-parametric alternative)
-kruskal_result <- pcr_raw_zoo_coi_long %>%
-  group_by(Sample_ID.y) %>%
-  do(kruskal_test = kruskal.test(relative_abundance ~ Method, data = .))
-
-# Print results
-print(kruskal_result$kruskal_test)
-
-# Perform Tukey's HSD post hoc test
-tukey_result <- TukeyHSD(anova_result)
-
-# Print the results
-print(tukey_result)
+labels_for_map=pcr_raw_zoo_coi %>% 
+  ungroup()%>%
+  select(Sample_ID_short,PC1) %>%
+  unique(.) %>%
+  arrange((PC1))
 
 #Plot grouped bar plot
 pcr_raw_zoo_coi_long %>%
