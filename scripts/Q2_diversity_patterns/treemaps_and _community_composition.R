@@ -208,6 +208,177 @@ ggsave(
 
 
 
+# Fido taxa ---------------------------------------------------------------
+
+
+# 18S ---------------------------------------------------------------------
+
+
+
+#Predicted proportions
+fido_s1_raw=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy.csv")) %>% 
+  select(-starts_with("X")) %>% 
+  pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
+  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
+  group_by(Sample_ID_short, Family) %>%
+  summarise(n_reads = sum(n_reads)) %>%
+  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
+  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
+
+
+fido_s2_raw=read.csv(here("data/fido/phy/fido_18s_s2_ecdf_family_phy.csv")) %>% 
+  select(-starts_with("X")) %>% 
+  pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
+  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
+  group_by(Sample_ID_short, Family) %>%
+  summarise(n_reads = sum(n_reads)) %>%
+  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
+  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
+
+
+fido_s3_raw=read.csv(here("data/fido/phy/fido_18s_s3_ecdf_family_phy.csv")) %>% 
+  select(-starts_with("X")) %>% 
+  pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
+  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
+  group_by(Sample_ID_short, Family) %>%
+  summarise(n_reads = sum(n_reads)) %>%
+  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
+  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
+
+
+merge(fido_s1_raw, fido_s2_raw, by = "Family", all = TRUE) %>%
+  merge(.,fido_s3_raw, by = "Family", all = TRUE)%>%
+  column_to_rownames("Family") %>%
+  mutate(across(.cols = everything(), .fns = ~ coalesce(., 0)))-> fido_18s_merged_raw
+
+#Metadata
+env_metadata_phy=env_metadata %>%
+  column_to_rownames("Sample_ID_dot")
+
+#Make phyloseq objects
+
+#18s
+# OTU = otu_table(as.matrix(zhan_otu), taxa_are_rows = TRUE)
+OTU = otu_table(as.matrix(fido_18s_merged_raw), taxa_are_rows = TRUE)
+TAX = tax_table(as.matrix(zhan_taxa))
+meta=sample_data(env_metadata_phy)
+
+#USe proportions
+phy_18s=phyloseq_transform_to_long((phyloseq(OTU, TAX, meta))) %>% 
+  mutate(Family=asv_code)
+phy_18s %>%
+  filter(size_fraction==0.2) %>% 
+phyloseq_long_treemap_top(., Family, Class ,"",10,colors=NULL, label_group1 = TRUE)->s1_18s
+phy_18s %>%
+  filter(size_fraction==0.5) %>% 
+  phyloseq_long_treemap_top(., Family, Class ,"",10,colors=NULL, label_group1 = TRUE)->s2_18s
+phy_18s %>%
+  filter(size_fraction==1) %>% 
+  phyloseq_long_treemap_top(., Family, Class ,"",10,colors=NULL, label_group1 = TRUE)->s3_18s
+
+fido_18s_tree=grid.arrange(s1_18s,s2_18s,s3_18s,nrow=1)
+
+ggsave(
+  filename = here("plots/treemaps/fido_18s_treemap.png"),
+  plot = fido_18s_tree,
+  width = 20,  # Width in inches
+  height = 9  # Height in inches
+)
+
+ggsave(
+  filename = here("plots/treemaps/fido_18s_treemap.pdf"),
+  plot = fido_18s_tree,
+  width = 20,  # Width in inches
+  height = 9  # Height in inches
+)
+
+
+
+# COI ---------------------------------------------------------------------
+
+#Taxa
+coi_taxa=read.csv(here("data/phyloseq_bio_data/COI/fido_coi_genus_tax_table.csv")) %>%
+  mutate(Genus = ifelse(Genus == "Genus", Family, Genus)) %>%
+  column_to_rownames("Genus") %>% 
+  mutate(Hash=X) %>%
+  select(-X)
+
+
+
+#Predicted proportions
+fido_s1_raw=read.csv(here("data/fido/phy/fido_coi_s1_ecdf_taxa_phy.csv")) %>% 
+  select(-starts_with("X")) %>% 
+  pivot_longer(cols = -Genus, names_to = "Sample_ID", values_to = "n_reads") %>%
+  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
+  group_by(Sample_ID_short, Genus) %>%
+  summarise(n_reads = sum(n_reads)) %>%
+  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
+  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
+
+
+fido_s2_raw=read.csv(here("data/fido/phy/fido_coi_s2_ecdf_taxa_phy.csv")) %>% 
+  select(-starts_with("X")) %>% 
+  pivot_longer(cols = -Genus, names_to = "Sample_ID", values_to = "n_reads") %>%
+  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
+  group_by(Sample_ID_short, Genus) %>%
+  summarise(n_reads = sum(n_reads)) %>%
+  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
+  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
+
+
+fido_s3_raw=read.csv(here("data/fido/phy/fido_coi_s3_ecdf_taxa_phy.csv")) %>% 
+  select(-starts_with("X")) %>% 
+  pivot_longer(cols = -Genus, names_to = "Sample_ID", values_to = "n_reads") %>%
+  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
+  group_by(Sample_ID_short, Genus) %>%
+  summarise(n_reads = sum(n_reads)) %>%
+  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
+  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
+
+
+merge(fido_s1_raw, fido_s2_raw, by = "Genus", all = TRUE) %>%
+  merge(.,fido_s3_raw, by = "Genus", all = TRUE)%>%
+  column_to_rownames("Genus") %>%
+  mutate(across(.cols = everything(), .fns = ~ coalesce(., 0)))-> fido_coi_merged_raw
+
+
+#Make phyloseq objects
+
+#coi
+# OTU = otu_table(as.matrix(coi_otu), taxa_are_rows = TRUE)
+OTU = otu_table(as.matrix(fido_coi_merged_raw), taxa_are_rows = TRUE)
+TAX = tax_table(as.matrix(coi_taxa))
+meta=sample_data(env_metadata_phy)
+
+#USe proportions
+phy_coi=phyloseq_transform_to_long((phyloseq(OTU, TAX, meta))) %>% 
+  mutate(Genus=asv_code)
+phy_coi %>%
+  filter(size_fraction==0.2) %>% 
+  phyloseq_long_treemap_top(., Genus, Family ,"",10,colors=NULL, label_group1 = TRUE)->s1_coi
+phy_coi %>%
+  filter(size_fraction==0.5) %>% 
+  phyloseq_long_treemap_top(., Genus, Family ,"",10,colors=NULL, label_group1 = TRUE)->s2_coi
+phy_coi %>%
+  filter(size_fraction==1) %>% 
+  phyloseq_long_treemap_top(., Genus, Family ,"",10,colors=NULL, label_group1 = TRUE)->s3_coi
+
+fido_coi_tree=grid.arrange(s1_coi,s2_coi,s3_coi,nrow=1)
+
+ggsave(
+  filename = here("plots/treemaps/fido_coi_treemap.png"),
+  plot = fido_coi_tree,
+  width = 20,  # Width in inches
+  height = 9  # Height in inches
+)
+
+ggsave(
+  filename = here("plots/treemaps/fido_coi_treemap.pdf"),
+  plot = fido_coi_tree,
+  width = 20,  # Width in inches
+  height = 9  # Height in inches
+)
+
 
 
 
@@ -461,7 +632,7 @@ palette_named <- setNames(contrast_palette, orders_coi)
 
 Phy_glom_coi %>%
   group_by(Order) %>%
-  # filter(Order %in% c("Calanoida","Euphausiacea")) %>%
+  filter(Order %in% c("Calanoida")) %>%
   # filter(prop < 0.001)  %>%
   # bind_rows(.,low_prop_families) %>%
   # filter(prop > 0.01 | Family=="Other") %>% # Create a new data frame with 'other' category

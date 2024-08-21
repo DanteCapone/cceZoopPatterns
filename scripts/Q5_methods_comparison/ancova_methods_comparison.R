@@ -72,11 +72,11 @@ zhan_taxa=read.csv(here("data/phyloseq_bio_data/18S/fido_18s_family_tax_table.cs
 
 #===== PCR Bias Mitigated Proportion Data
 #Predicted proportions
-fido_s1=read.csv(here("data/predicted_og/predicted_og_18s_04_18_2024_s1_phy_all_and_subpools.csv")) %>%
+fido_s1=read.csv(here("data/predicted_og/predicted_og_18s_04_17_2024_s1_phy_all_and_subpools.csv")) %>%
   select(-X)
-fido_s2=read.csv(here("data/predicted_og/predicted_og_18s_04_18_2024_s2_phy_all_and_subpools.csv")) %>%
+fido_s2=read.csv(here("data/predicted_og/predicted_og_18s_04_17_2024_s2_phy_all_and_subpools.csv")) %>%
   select(-X)
-fido_s3=read.csv(here("data/predicted_og/predicted_og_18s_04_18_2024_s3_phy_all_and_subpools.csv")) %>%
+fido_s3=read.csv(here("data/predicted_og/predicted_og_18s_04_17_2024_s3_phy_all_and_subpools.csv")) %>%
   select(-X)
 #Merge
 final_data_all_sizes=rbind(fido_s1,fido_s2,fido_s3) %>%
@@ -457,7 +457,7 @@ pcr_raw_zoo_18s %>%
   scale_fill_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   scale_color_manual(values=c("#5BA3D5", "#66CC66", "#FF4C38"), labels=c("0.2-0.5 mm","0.5-1 mm","1-2 mm")) +
   # geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +  # Add linear regression line
-  # facet_wrap(~cycle.y, nrow=3) +
+  facet_wrap(~size_fraction, nrow=3) +
   labs(x = "Zooscan Biomass Proportion (arcsine square-root)", y = "PCR Bias-Mitigated Relative Abundance (arcsine square-root)", shape = "Cycle", color = "Size Fraction") +  # Add axis labels
   ggtitle("pearson Correlation between Zooscan Biomass Proportion and PCR Bias-Mitigated Relative Abundance")+
   stat_cor(method = "pearson", label.x = 0.1, label.y = 1.3)+
@@ -505,7 +505,7 @@ pcr_raw_zoo_18s %>%
   ggtitle("pearson Correlation between Zooscan Biomass Proportion and Raw Relative Abundance")+
   stat_cor(method = "pearson", label.x = 0.1, label.y = 1.5)+
   guides(size = FALSE, fill=FALSE) +
-  # facet_wrap(~offshore_onshore, nrow=3) +
+  facet_wrap(~size_fraction, nrow=3) +
   theme_classic()+
   theme(axis.text.x = element_text(hjust = 1, size = 12),
         axis.text.y = element_text(size = 12),

@@ -143,6 +143,7 @@ summary(lm_model_coi)
 
 ## Create a scatter plot with regression line, confidence intervals, and color by 'cycle'
 #My colors for Cycles
+txt_sz=24
 my_palette=custom_pallete()
 coi_plot=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
   geom_point(size=8, aes(shape=cycle, fill=cycle))+
@@ -151,13 +152,18 @@ coi_plot=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
   coord_cartesian(ylim = c(1.5, 4), xlim = c(min(plot_data_18s$PC1), 7))+
   scale_x_continuous(breaks = seq(-6, 7, by = 2))+
   scale_fill_manual(values = my_palette) +
-  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI") +
+  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI",
+       shape="Cycle", fill="Cycle") +
   scale_color_discrete(name = "Cycle") +  # Adjust color legend label
-  stat_cor(method="pearson", label.x = 4, label.y = 3.5)+
-  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.7)+
-  theme_classic()
+  stat_cor(method="pearson", label.x = 0, label.y = 3.5, size=8)+
+  # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.7)+
+  theme_classic()+
+  theme(axis.text.x = element_text(hjust = 1, size = txt_sz),
+        axis.text.y = element_text(size = txt_sz),
+        axis.title = element_text(size = txt_sz),
+        strip.text = element_text(size = txt_sz))
 coi_plot
-saving=0
+saving=1
 if (saving==1) {
   ggsave(
     filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_coi_all.pdf"), 
@@ -184,14 +190,20 @@ zhan_plot=ggplot(plot_data_18s, aes(x = PC1, y = Shannon)) +
   scale_fill_manual(values = my_palette) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
         axis.text.y = element_text(size = 12),
-        axis.title = element_text(size = 14),
-        strip.text = element_text(size = 14))+
+        axis.title = element_text(size = txt_sz),
+        strip.text = element_text(size = txt_sz))+
   # scale_y_continuous(breaks = seq(0, 4, length.out = 10))+
   scale_fill_manual(values = my_palette) +
-  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="18S") +
+  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="18S",
+       shape="Cycle", fill="Cycle") +
   scale_color_discrete(name = "Cycle") +  # Adjust color legend label
-  stat_cor(method="pearson", label.x = 4, label.y = 3.5)+
-  theme_classic()
+  stat_cor(method="pearson", label.x = 0, label.y = 3.5, size=8)+
+  # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.7)+
+  theme_classic()+
+  theme(axis.text.x = element_text(hjust = 1, size = txt_sz),
+        axis.text.y = element_text(size = txt_sz),
+        axis.title = element_text(size = txt_sz),
+        strip.text = element_text(size = txt_sz))
 zhan_plot
 if (saving==1) {
   ggsave(
@@ -216,7 +228,23 @@ if (saving==1) {
 #Both
 both_plot=grid.arrange(coi_plot,zhan_plot)
 both_plot
-ez_save(both_plot,"plots/Q2_diversity_indices/","pc1_vs_shannon_both")
+
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_both_all.pdf"), 
+    plot = both_plot,
+    width = 12,  # Width in inches
+    height = 16  # Height in inches
+  ) }
+
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_both_all.png"), 
+    plot = both_plot,
+    width = 12,  # Width in inches
+    height = 16  # Height in inches
+  ) }
+
 
 #Save
 #COI
@@ -275,6 +303,7 @@ facet_correlation <- plot_data_ %>%
 # Print the result
 print(facet_correlation)
 
+txt_sz=24
 coi_plot_sized=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
   geom_point(size = 6, aes(shape = cycle, fill = cycle), show.legend = TRUE) +
   scale_shape_manual(values = c("1" = 21, "2" = 22, "3" = 24, "T1" = 23, "T2" = 25)) +
@@ -285,16 +314,16 @@ coi_plot_sized=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
   scale_fill_manual(values = my_palette) +
   labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI") +
   # scale_color_discrete(name = "Cycle") +  # Adjust color legend label
-  stat_cor(method="pearson", label.x = 4, label.y = 4,
-           size=5)+
+  stat_cor(method="pearson", label.x = 2, label.y = 4,
+           size=8)+
   theme_classic()+
   facet_wrap(~max_size, nrow = 3, labeller = labeller(max_size = c("0.5" = "0.2-0.5 mm", "1" = "0.5-1 mm", "2" = "1-2 mm"))) +
   # Altering font sizes
-  theme(strip.text = element_text(size = 14),
-        axis.text.x = element_text(size = 16),
-        axis.text.y = element_text(size = 16),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16)) +
+  theme(strip.text = element_text(size = txt_sz),
+        axis.text.x = element_text(size = txt_sz),
+        axis.text.y = element_text(size = txt_sz),
+        axis.title.x = element_text(size = txt_sz),
+        axis.title.y = element_text(size = txt_sz)) +
   guides(color = "none") 
 coi_plot_sized
 
@@ -350,15 +379,15 @@ zhan_plot_sized <- ggplot(plot_data_18s, aes(x = PC1, y = Shannon)) +
   labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="18S") +
   # scale_color_discrete(name = "Cycle") +  # Adjust color legend label
   stat_cor(method="pearson", label.x = 4, label.y = 3.5,
-  size=5)+
+  size=8)+
   theme_classic()+
   facet_wrap(~max_size, nrow = 3, labeller = labeller(max_size = c("0.5" = "0.2-0.5 mm", "1" = "0.5-1 mm", "2" = "1-2 mm"))) + 
   # Altering font sizes
-  theme(strip.text = element_text(size = 14),
-        axis.text.x = element_text(size = 16),
-        axis.text.y = element_text(size = 16),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16)) +
+  theme(strip.text = element_text(size = txt_sz),
+        axis.text.x = element_text(size = txt_sz),
+        axis.text.y = element_text(size = txt_sz),
+        axis.title.x = element_text(size = txt_sz),
+        axis.title.y = element_text(size = txt_sz)) +
   guides(color = "none") 
 zhan_plot_sized
 
@@ -380,4 +409,22 @@ if (saving==1) {
   ) }
 
 
-#On PCR Biad mitigated data 
+both_plot_sized=grid.arrange(coi_plot_sized,zhan_plot_sized, nrow=2)
+both_plot_sized
+
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_both_all_sized.pdf"), 
+    plot = both_plot_sized,
+    width = 12,  # Width in inches
+    height = 16  # Height in inches
+  ) }
+
+if (saving==1) {
+  ggsave(
+    filename = here("plots/Q2_diversity_indices/","pc1_vs_shannon_both_all_sized.png"), 
+    plot = both_plot,
+    width = 12,  # Width in inches
+    height = 16  # Height in inches
+  ) }
+

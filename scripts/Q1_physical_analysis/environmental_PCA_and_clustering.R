@@ -1,27 +1,17 @@
-#Script for pca and clustering
+#Script for EDA visualization, pca and clustering
 
 #1) load in metadata and select desired rows 
 
-library(knitr)
 library(tidyverse)
-library(clustertend)
-library(cluster)
-library(flexclust)
-library(fpc)
-library(clustertend)
-library(ClusterR)
 library(factoextra)
 library(gridExtra)
-library(paran)
-library(BBmisc)
-library(stats)
-library(car)
 library(ggfortify)
 library(ggrepel)
 library(here)
 library(missMDA)
 library(factoextra)
 library(NbClust)
+library(corrplot)
 
 
 #Set working directory
@@ -29,30 +19,23 @@ here()
 env_metadata<-read.csv(here("data/pre_processing/metadata03-28-2023.csv")) 
 names(env_metadata)
 
-# selected_vars <- c(Sample_ID,Sample_ID_short,Sample_ID_dot,potemp2,density2,Sal2,NO2,nitracline_depth,NO3,fluorescence,hypoxia_depth,chl_max_depth,
-#                    PO4,SIL,NH4,beam_depth,chl_max,mixedlayerdepths,integrated_chl,day_night_0_1,distance_from_shore) 
 
+# Making the metadata -----------------------------------------------------
+
+#Various metadata frames for each analysis
 env_metadata_long= env_metadata %>% dplyr::select(c(Sample_ID,max_size,Sample_ID_short,cycle,potemp2,density2,oxy_sat,Sal2,NO2,nitracline_depth,NO3,fluorescence,hypoxia_depth,chl_max_depth,
-                                                   PO4,SIL,NH4,beam_depth,chl_max,mixedlayerdepths,intergrated_chl,day_night_0_1,distance_from_shore,
-                                                   PAR_1_depth)) 
-env_metadata_phy= env_metadata %>% dplyr::select(c(Sample_ID_dot,Sample_ID,max_size,Sizefractionmm,Sample_ID_short,cycle,potemp2,density2,oxy_sat,Sal2,NO2,nitracline_depth,NO3,fluorescence,hypoxia_depth,chl_max_depth,
                                                     PO4,SIL,NH4,beam_depth,chl_max,mixedlayerdepths,intergrated_chl,day_night_0_1,distance_from_shore,
                                                     PAR_1_depth)) 
-env_metadata_phy_map= env_metadata %>% dplyr::select(c(Sample_ID_dot,Sample_ID,max_size,Sizefractionmm,Sample_ID_short,cycle,potemp2,density2,oxy_sat,Sal2,NO2,nitracline_depth,NO3,fluorescence,hypoxia_depth,chl_max_depth,
-                                                   PO4,SIL,NH4,beam_depth,chl_max,mixedlayerdepths,intergrated_chl,day_night_0_1,distance_from_shore,
-                                                   PAR_1_depth,LONGITUDE,LATITUDE)) 
-# env_metadata_phy=env_metadata_phy_map
+# env_metadata_phy= env_metadata %>% dplyr::select(c(Sample_ID_dot,Sample_ID,max_size,Sizefractionmm,Sample_ID_short,cycle,potemp2,density2,oxy_sat,Sal2,NO2,nitracline_depth,NO3,fluorescence,hypoxia_depth,chl_max_depth,
+#                                                     PO4,SIL,NH4,beam_depth,chl_max,mixedlayerdepths,intergrated_chl,day_night_0_1,distance_from_shore,
+#                                                     PAR_1_depth)) 
+# env_metadata_phy_map= env_metadata %>% dplyr::select(c(Sample_ID_dot,Sample_ID,max_size,Sizefractionmm,Sample_ID_short,cycle,potemp2,density2,oxy_sat,Sal2,NO2,nitracline_depth,NO3,fluorescence,hypoxia_depth,chl_max_depth,
+#                                                    PO4,SIL,NH4,beam_depth,chl_max,mixedlayerdepths,intergrated_chl,day_night_0_1,distance_from_shore,
+#                                                    PAR_1_depth,LONGITUDE,LATITUDE)) 
 
-#If I want to just look at sampling site
-env_metadata_sel= env_metadata_long %>% filter(max_size==2.0) %>% dplyr::select(-c(max_size))
-# write.csv(env_metadata_sel,"data/CURRENT_WORKING_Metadata/env_metadata_just_sites_8.16.2023.csv")
-
-#Else
-env_metadata_sel= env_metadata_long
-
-
+#If I want to just look at sampling site not all sizes since the data are repeated for each size
 #Make nighttime PAR equal to day time
-env_metadata_sel =env_metadata_sel %>%
+env_metadata_sel =env_metadata_long %>%
   group_by(cycle) %>%
   mutate(PAR_1_depth_adj = ifelse(cycle %in% c(1,2,3), max(PAR_1_depth),PAR_1_depth)) %>%
   filter(max_size==0.5) %>%
@@ -60,35 +43,32 @@ env_metadata_sel =env_metadata_sel %>%
   bind_rows() %>% ungroup() %>%
   dplyr::select(-c("Sample_ID","cycle","PAR_1_depth"))%>%column_to_rownames("Sample_ID_short") 
 
+#####BIOLOGICAL METADATA Make an imputed dataset for phyloseq analysis
+
+# env_metadata_phy_sel =env_metadata_phy %>%
+#   group_by(cycle) %>%
+#   mutate(PAR_1_depth_adj = ifelse(cycle %in% c(1,2,3), max(PAR_1_depth),PAR_1_depth)) %>% 
+#   bind_rows() %>% ungroup() %>%
+#   dplyr::select(-c("Sample_ID_short","cycle","PAR_1_depth","max_size","Sizefractionmm","Sample_ID_dot"))%>%column_to_rownames("Sample_ID")
+# 
+# #For cluster analysis use short DF 
+# env_metadata_phy_sel =env_metadata_phy %>%
+#   group_by(cycle) %>%
+#   mutate(PAR_1_depth_adj = ifelse(cycle %in% c(1,2,3), max(PAR_1_depth),PAR_1_depth)) %>% 
+#   bind_rows() %>% ungroup() %>% 
+#   dplyr::select(-c("Sample_ID","cycle","PAR_1_depth","max_size","Sizefractionmm","Sample_ID_dot"))%>%
+#   distinct()%>%column_to_rownames("Sample_ID_short")
 
 
 
-## Imputation
+
+# IMPUTATION --------------------------------------------------------------
+
+## Imputation, impute the missing nutrient data
 estim_ncpPCA(env_metadata_sel)
 metadata_impute <- imputePCA(env_metadata_sel,ncp=1)
 
-
-
-
-
-#####BIOLOGICAL METADATA Make an imputed dataset for phyloseq analysis
-
-env_metadata_phy_sel =env_metadata_phy %>%
-  group_by(cycle) %>%
-  mutate(PAR_1_depth_adj = ifelse(cycle %in% c(1,2,3), max(PAR_1_depth),PAR_1_depth)) %>% 
-  bind_rows() %>% ungroup() %>%
-  dplyr::select(-c("Sample_ID_short","cycle","PAR_1_depth","max_size","Sizefractionmm","Sample_ID_dot"))%>%column_to_rownames("Sample_ID")
-
-#For cluster analysis use short DF (8/8/2023)
-env_metadata_phy_sel =env_metadata_phy %>%
-  group_by(cycle) %>%
-  mutate(PAR_1_depth_adj = ifelse(cycle %in% c(1,2,3), max(PAR_1_depth),PAR_1_depth)) %>% 
-  bind_rows() %>% ungroup() %>% 
-  dplyr::select(-c("Sample_ID","cycle","PAR_1_depth","max_size","Sizefractionmm","Sample_ID_dot"))%>%
-  distinct()%>%column_to_rownames("Sample_ID_short")
-
-
-## Imputation
+## Imputation on phyloseq metadata frames
 estim_ncpPCA(env_metadata_phy_sel)
 metadata_impute <- imputePCA(env_metadata_phy_sel,ncp=1)
 
@@ -103,7 +83,86 @@ metadata_impute_df_phy=metadata_impute$completeObs %>% data.frame() %>%
   mutate(Sample_ID_dot=env_metadata_phy_add_back$Sample_ID_dot)   # column_to_rownames("Sample_ID_short")
 
 
-#PCA
+
+
+
+
+
+
+
+
+
+
+# Correlation plot --------------------------------------------------------
+
+here()
+meta_data_phy=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
+  dplyr::select(-c("X")) %>%
+  column_to_rownames("Sample_ID_dot") %>%
+  select(-c(Sizefractionmm,offshore_onshore,clust_group,PC1,cycle, max_size))
+
+dat_all=phyloseq(otucoi,taxcoi,meta_data_phy)
+dat=merge_samples(dat_all,"Sample_ID_short",fun= mean)%>%
+  filter_taxa(function(x) sum(x > 3) > 0.10*length(x), TRUE)
+
+set.seed(899)
+
+
+##Env Correlation matrix
+meta_corr=meta_data_phy %>% dplyr::select(-Sample_ID_short) %>%
+  cor(.)
+
+# Compute p-values using correlation matrix
+p_values <- cor.mtest(meta_data_phy %>% dplyr::select(-Sample_ID_short))$p %>%
+  as.data.frame() %>%
+  rownames_to_column("variable") %>%
+  pivot_longer(cols = -variable, names_to = "variable2", values_to = "p.value")%>%
+  # Adjust p-values using Benjamini-Hochberg correction
+  mutate(p.adj= p.adjust(p.value, method = "BH") )
+
+p_vals_adj=p_values %>%
+  group_by(variable, variable2) %>%
+  summarise(p.adj = mean(p.adj, na.rm = TRUE)) %>%
+  ungroup() %>% # Ensure to ungroup the data after summarizing 
+  pivot_wider(names_from = variable, values_from = p.adj) %>%
+  column_to_rownames("variable2") %>%
+  as.matrix()
+
+
+
+
+# Corr using corrplot --------------------------------------------------------------------
+library(corrplot)
+dev.off()
+# Sort the row names and column names to ensure alignment
+meta_corr <- meta_corr[order(rownames(meta_corr)), order(colnames(meta_corr))]
+p_vals_adj <- p_vals_adj[order(rownames(p_vals_adj)), order(colnames(p_vals_adj))]
+
+
+corr_plot=corrplot(meta_corr,p.mat=p_vals_adj, type = 'lower', order = 'FPC', tl.col = 'black',
+                   cl.ratio = 0.2, tl.srt = 45)
+corr_plot
+
+#PNG & PDF Save
+ggsave(
+  filename = here("plots/Q1_physical_analysis/corr_plot_p_adj.png"),
+  plot = corr_plot,
+  width = 10,  # Width in inches
+  height = 8  # Height in inches
+)
+
+ggsave(
+  filename = here("plots/Q1_physical_analysis/corr_plot_p_adj.pdf"),
+  plot = corr_plot,
+  width = 10,  # Width in inches
+  height = 8  # Height in inches
+)
+
+
+
+
+# PCA ---------------------------------------------------------------------
+
 pca_in=metadata_impute$completeObs %>% as.data.frame() 
 env_pca=prcomp(pca_in, scale=TRUE)
 # env_pca=PCA(pca_in)
@@ -113,20 +172,13 @@ env_pca_df=env_pca$x %>% as.data.frame()
 
 
 #New plot
+env_pca_df=env_pca$x %>% as.data.frame()
 
 
-# Determine a threshold for significance. Here, we use a threshold of 0.6 as an example.
-threshold <- 4
 
-# Filter out variables that don't meet the threshold on both dimensions
-significant_vars <- rownames(var_cos2)[var_cos2[,1] > threshold | var_cos2[,2] > threshold]
-
-# Use fviz_pca_var() to plot only significant variables
-# We'll utilize the `select.var` argument to select the significant variables.
-fviz_pca_var(env_pca, select.var = list(name = significant_vars), repel = TRUE)
+#New plot
 
 ##Contribution of vars to pcs
-
 #Which PCs contribute significantly
 explained_var <- env_pca$sdev^2 / sum(env_pca$sdev^2)
 df <- data.frame(component = 1:length(explained_var), explained_var = explained_var)
@@ -148,7 +200,6 @@ grid.arrange(pc1_p,pc2_p)
 #Biplot
 fviz_pca_biplot(env_pca, 
                 pointsize = 3,  # size of data points
-                col.var = "cycle", # color of variable vectors
                 repel = TRUE)
 fviz_pca_var(env_pca, col.var = "cos2",
               gradient.cols = c("blue" ,"purple","orange","red"),
@@ -166,23 +217,16 @@ autoplot(env_pca, data=metadata_impute_df_phy,size=3, labels="Sample_ID_dot")+th
 plot1=autoplot(env_pca, data=metadata_impute_df_phy,label=TRUE,colour="cycle", label.size=4, loadings=TRUE,size=3, loadings.colour = 'blue',
                loadings.label = TRUE, loadings.label.size =5, scale = 1, repel=TRUE)+theme_classic()
 plot1
-
-#With loadings
-pca_2=autoplot(env_pca, data=metadata_impute_df_phy, colour="cycle",label=TRUE, label.size=4, loadings=TRUE,size=3, loadings.colour = 'blue',
-               loadings.label = TRUE, loadings.label.size =4, scale = 0)+theme_classic()
-pca_2
-
-
-grid.arrange(plot1, pca_2, ncol=2)
   
 
 
-#Clustering using pvclust
+#Clustering using pvclust. Cluster the PCA dataframe using hierarchical clustering
+# 
 library(pvclust)
 set.seed(123)
 env_pca_df=env_pca$x %>% as.data.frame()
 # env_pca_df=pca_in
-res.pv <- pvclust(t(env_pca_df), method.dist="cor",method.hclust="average", nboot = 10000)
+res.pv <- pvclust(t(env_pca_df), method.dist="cor",method.hclust="average", nboot = 1000)
 # seplot(res.pv, identify=TRUE)
 
 #Plot and save figures
@@ -208,7 +252,7 @@ dev.off()
 
 res.pv.phys=res.pv %>% as.data.frame(.)
 
-#Optimal cluster #
+#Determine the Optimal cluster #
 # Silhouette method
 fviz_nbclust(pca_in, kmeans, method = "silhouette")+
   labs(subtitle = "Silhouette method")
@@ -220,8 +264,10 @@ clusters
 onshore=array(unlist(clusters$clusters[2]),dim=c(8,1))
 offshore=array(unlist(clusters$clusters[1]),dim=c(9,1))
 onshore
-#Add clustering variable to dataframe
 
+
+
+#Add clustering variable to dataframe
 metadata_impute_df_phy$clust_group=rep(1,length(metadata_impute_df_phy$Sample_ID_short))
 metadata_impute_df_phy$clust_group[metadata_impute_df_phy$Sample_ID_short %in% offshore]=2
 metadata_impute_df_phy$offshore_onshore[metadata_impute_df_phy$clust_group==2]="offshore"

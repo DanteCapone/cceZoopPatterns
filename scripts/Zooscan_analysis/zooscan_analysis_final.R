@@ -38,7 +38,20 @@ zooscan_processed=readEcotaxa(zooscan_exp)%>%
          sample_id = ifelse(sample_id == "c3_bt6_h25", "c3_t6_h25", sample_id)) %>%
   #Need to fix hyperiids
   filter(!(object_annotation_category %in% c("Hyperiidea","part<Crustacea","darksphere", "multiple organisms","head<Chaetognatha",
-                                             "egg<Actinopterygii")))
+                                             "egg<Actinopterygii"))) %>%
+  #Fix missing volume filtered 
+  mutate(sample_tot_vol = case_when(
+    sample_id == "ct1_t1_h28" ~ 279,
+    sample_id == "ct1_t2_h29" ~ 278,
+    TRUE ~ sample_tot_vol  # This line keeps the original values for all other rows
+  ))
+
+
+
+
+
+# Analysis ----------------------------------------------------------------
+
 
 # Compute Shannon Diversity Index by site
 # Count the number of individuals for each taxa within each site
@@ -125,13 +138,17 @@ zooscan_by_sample = biomass_map %>%
             dryweight_C_ug_sum_taxa = sum(dryweight_C_ug, na.rm = TRUE),
             dryweight_C_mg_sum_sample=mean(dryweight_C_mg_sum_sample),
             dryweight_C_ug_sum_sample=mean(dryweight_C_ug_sum_sample),
-            sample_conc=mean(sample_conc))%>%
+            sample_conc=mean(sample_conc),
+            sample_tot_vol=mean(sample_tot_vol),
+            acq_sub_part=mean(acq_sub_part))%>%
   left_join(metadata, by="sample_id") %>%
   mutate(log10_dryweight_C_ug_m2_taxa=log(dryweight_C_ug_sum_taxa),
          dryweight_C_mg_m2_taxa=dryweight_C_mg_sum_taxa*sample_conc,
          log10_dryweight_C_ug_m2_sample=log(dryweight_C_ug_sum_sample),
          dryweight_C_mg_m2_sample=dryweight_C_mg_sum_sample*sample_conc) %>%
-  mutate(biomass_prop_taxa=dryweight_C_mg_m2_taxa/dryweight_C_mg_m2_sample)
+  mutate(biomass_prop_taxa=dryweight_C_mg_m2_taxa/dryweight_C_mg_m2_sample,
+         biomass_taxa_clr=clr_convert(dryweight_C_mg_m2_taxa)) %>% 
+  distinct(biomass_taxa_clr, .keep_all = TRUE) 
 
 
 
@@ -153,6 +170,66 @@ write.csv(zooscan_by_sample,here("data/Zooscan/zooscan_by_sample_biomass.csv"))
 
 
 
+
+# Scale Comparison: Zooscan Biomass vs. Volume Filtered -------------------
+#Plot grouped bar plot
+labels_for_map=zooscan_by_sample %>% 
+  ungroup()%>%
+  select(sample_id,PC1) %>%
+  unique(.) %>%
+  arrange((PC1))
+
+
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+
+# Filter data and remove rows with NA or infinite values
+cleaned_data <- zooscan_by_sample %>%
+  filter(size_fraction != ">2") %>%
+  filter(object_annotation_category == "Calanoida") %>%
+  filter(is.finite(sample_tot_vol) & is.finite(dryweight_C_mg_sum_sample * acq_sub_part))
+
+# Check if there are enough finite observations for correlation calculation
+if (nrow(cleaned_data) < 3) {
+  stop("Not enough finite observations for correlation calculation.")
+}
+
+# Plotting
+cleaned_data %>%
+  ggplot(aes(x = sample_tot_vol, y = log10(dryweight_C_mg_sum_sample * acq_sub_part), fill = as.factor(size_fraction), color = as.factor(size_fraction), shape = cycle)) +
+  geom_point(size = 4) +
+  scale_shape_manual(values = c("1" = 21, "2" = 22, "3" = 24, "T1" = 23, "T2" = 25)) +
+  scale_fill_manual(values = c("#5BA3D5", "#66CC66", "#FF4C38"), labels = c("0.2-0.5 mm", "0.5-1 mm", "1-2 mm")) +
+  scale_color_manual(values = c("#5BA3D5", "#66CC66", "#FF4C38"), labels = c("0.2-0.5 mm", "0.5-1 mm", "1-2 mm")) +
+  stat_cor(method = "spearman", label.x = max(cleaned_data$sample_tot_vol) * 0.9, 
+           label.y = max(log10(cleaned_data$dryweight_C_mg_sum_sample * cleaned_data$acq_sub_part)) * 0.9) +
+  labs(x = "Volume Filtered (m^3)", y = "log10(Carbon Biomass) [g/m^3]", title = "Zooscan Sample Carbon Biomass vs. Volume Filtered", shape = "Cycle", color = "Size Fraction") + 
+  theme_minimal() +
+  facet_wrap(~size_fraction) +
+  guides(size = FALSE, fill = FALSE) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+    axis.text.y = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    plot.title = element_text(size = 16, face = "bold"),
+    legend.position = "right",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  )
+
+
+
+zooscan_by_sample %>% 
+  filter(object_annotation_category=="Calanoida") %>% 
+  ggplot(aes(x=sample_tot_vol, y=dryweight_C_mg_sum_taxa*acq_sub_part, color=size_fraction))+
+  facet_wrap(~size_fraction )+
+  stat_cor(method = "pearson", label.x = 300, label.y = 0.5)+
+  geom_smooth(method = "lm", se = FALSE, color = "black", formula = y ~ x) +  # Add linear regression line  
+  geom_point()+
+  theme_minimal()
+
+zooscan_by_sample$sample_
 # Euphausiids -------------------------------------------------------------
 #Euphausiid DATA FRAME FOR PLOTTING
 zoop_euphausiid_by_sample = zooscan_by_sample %>%
