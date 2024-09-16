@@ -2,3 +2,12 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# Ignore all .fasta files
+*.fasta
+
+# Ignore all .tsv files
+*.tsv
+
+# Ignore everything inside the Analysis/ folder
+Analysis/
