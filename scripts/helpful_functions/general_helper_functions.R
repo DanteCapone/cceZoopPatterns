@@ -1,5 +1,7 @@
 # General helper functions
 library(dplyr)
+library(grDevices)
+
 
 #Convert df column to CLR
 clr_convert <- function(proportions_vector, pseudo_count = 1e-5) {
@@ -80,6 +82,30 @@ custom_pallete<- function() {
 
   return(custom_palette)
 }
+
+custom_pallete_all<- function() {
+  
+  custom_palette <- c(  "#8c271c", "#ed6b5c",  # Red shades
+                        "#f5d787", "#f5a42a",  # Orange shades
+                        "#bf54b5", "#fbb8ff",  # Purple shades
+                        "#8387EB", "#788FE7", "#6D98E3", "#62A1DE", "#57A9DA", "#4CB2D6", "#41BBD1", "#8BC9CC",  # Blue transition
+                        "#77f2a2", "#73a630", "#176630")  # More green shades
+  
+  return(custom_palette)
+}
+
+
+# Example usage
+sample_data <- data.frame(
+  Sample_ID_short = c("C1-T7-H9", "C1-T8-H10", "C2-T8-H18", "C2-T9-H19", 
+                      "C3-T6-H25", "C3-T7-H26", "CT1-T1-H28", "CT1-T2-H29", 
+                      "CT1-T3-H30", "CT1-T4-H31", "CT1-T5-H32", "CT1-T6-H33", 
+                      "CT1-T7-H34", "CT1-T8-H35", "CT2-T1-H36", "CT2-T4-H39", 
+                      "CT2-T8-H43"),
+  cycle = c("1", "1", "2", "2", "3", "3", "T1", "T1", "T1", "T1", "T1", "T1", 
+            "T1", "T1", "T2", "T2", "T2")
+)
+
 
 
 

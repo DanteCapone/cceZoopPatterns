@@ -95,11 +95,21 @@ metadata_impute_df_phy=metadata_impute$completeObs %>% data.frame() %>%
 
 # Correlation plot --------------------------------------------------------
 
-here()
-meta_data_phy=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
+meta_data_phy=read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
   dplyr::select(-c("X")) %>%
   column_to_rownames("Sample_ID_dot") %>%
   select(-c(Sizefractionmm,offshore_onshore,clust_group,PC1,cycle, max_size))
+
+
+#Load in the phyloseq data and format to a table
+
+#COI raw reads
+otucoi=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
+  column_to_rownames("Hash") %>%
+  select(where(~ !is.na(.[[1]])))
+
+taxcoi=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_tax.csv")) %>% column_to_rownames("Hash")
+
 
 dat_all=phyloseq(otucoi,taxcoi,meta_data_phy)
 dat=merge_samples(dat_all,"Sample_ID_short",fun= mean)%>%

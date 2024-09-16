@@ -13,30 +13,29 @@ library(tibble)
 library(tidyr)
 library(gridExtra)
 library(extrafont)
-here()
+here("")
 #Add functions for myself
-source(("scripts/helpful_functions/treemap_funs_Capone.R"))
-source("scripts/helpful_functions/phyloseq_mapping_funs.R")
-source("scripts/helpful_functions/general_helper_functions.R")
+source(("Zoop_Patterns/scripts/helpful_functions/treemap_funs_Capone.R"))
+source("Zoop_Patterns/scripts/helpful_functions/phyloseq_mapping_funs.R")
+source("Zoop_Patterns/scripts/helpful_functions/general_helper_functions.R")
 
-font_import(pattern = "Arial")  # Replace "Arial" with the name of a font that supports Unicode characters
 
 
 #Part one: Read in the physical environmental data
 
-env_metadata<-read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.2.2023_for_map.csv")) %>% dplyr::select(-c("X"))%>%
+env_metadata<-read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.2.2023_for_map.csv")) %>% dplyr::select(-c("X"))%>%
   column_to_rownames("Sample_ID_dot") %>%
   mutate(PC1=PC1*-1)
 
 #Load in the phyloseq data and format to a table
 
 #COI raw reads
-coi_metazoo_otu=read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
+coi_metazoo_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
 coi_metazoo_meta=env_metadata 
   
-coi_metazoo_taxa=read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_tax.csv")) %>% column_to_rownames("Hash")
+coi_metazoo_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_tax.csv")) %>% column_to_rownames("Hash")
 
 
 #Merge by site
@@ -59,11 +58,11 @@ Phy_merged_coi_raw <- merge_samples(Phy_coi_raw,c("Sample_ID_short"))
 Phy_merged_coi_raw=phyloseq(otu_table(Phy_merged_coi_raw),tax_table(Phy_merged_coi_raw),sample_data(coi_metazoo_meta_all))
 
 #18s
-zhan_metazoo_otu=read.csv(here("data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
+zhan_metazoo_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
 zhan_metazoo_meta=env_metadata
-zhan_metazoo_taxa=read.csv(here("data/phyloseq_bio_data/18S/metazoopruned18s_tax.csv")) %>% column_to_rownames("Hash")
+zhan_metazoo_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_tax.csv")) %>% column_to_rownames("Hash")
 
 
 #Merge by site
