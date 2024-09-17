@@ -83,8 +83,8 @@ Phy_merged_coi_raw=phyloseq(otu_table(Phy_merged_coi_raw),tax_table(Phy_merged_c
 zhan_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
-zhan_meta=env_metadata
 zhan_taxa=read.csv(here("Zoop_Patterns/data/taxa_files/blast_metazoo_18s.csv")) %>% column_to_rownames("Hash")
+zhan_meta=env_metadata
 
 
 #Merge by site
@@ -1098,12 +1098,16 @@ if (saving==1) {
 
 # COI ---------------------------------------------------------------------
 
+coi_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
+  column_to_rownames("Hash") %>%
+  select(where(~ !is.na(.[[1]])))
+coi_taxa=read.csv(here("Zoop_Patterns/data/taxa_files/blast_metazoo_coi.csv")) %>% column_to_rownames("Hash")
 
 #Need metadata with offshore_cluster
 meta_treemap=read.csv(here(project_path,"data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
   dplyr::select(-c("X")) %>%
   column_to_rownames("Sample_ID_dot") %>%
-  select(-c(Sizefractionmm,clust_group,PC1,cycle, max_size)) %>%
+  select(-c(Sizefractionmm,clust_group,cycle, max_size)) %>%
   sample_data(.)
 
 
@@ -1459,87 +1463,6 @@ ggsave(
 
 
 # Using Fido taxa ---------------------------------------------------------------------
-# Barcode: 18S
-
-#Predicted proportions
-fido_s1_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s1_ecdf_family_phy_all_subpools.csv")) %>% 
-  select(-starts_with("X")) %>% 
-  pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
-  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
-  group_by(Sample_ID_short, Family) %>%
-  summarise(n_reads = sum(n_reads)) %>%
-  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
-  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
-
-
-fido_s2_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s2_ecdf_family_phy_all_subpools.csv")) %>% 
-  select(-starts_with("X")) %>% 
-  pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
-  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
-  group_by(Sample_ID_short, Family) %>%
-  summarise(n_reads = sum(n_reads)) %>%
-  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
-  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
-
-
-fido_s3_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s3_ecdf_family_phy_all_subpools.csv")) %>% 
-  select(-starts_with("X")) %>% 
-  pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
-  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
-  group_by(Sample_ID_short, Family) %>%
-  summarise(n_reads = sum(n_reads)) %>%
-  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
-  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
-
-
-merge(fido_s1_raw, fido_s2_raw, by = "Family", all = TRUE) %>%
-  merge(.,fido_s3_raw, by = "Family", all = TRUE)%>%
-  column_to_rownames("Family") %>%
-  mutate(across(.cols = everything(), .fns = ~ coalesce(., 0)))-> fido_18s_merged_raw
-
-#Metadata
-env_metadata_phy=zhan_meta 
-
-#Make phyloseq objects
-
-#Load taxa
-zhan_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18s/fido_18s_family_tax_table.csv")) %>% 
-  column_to_rownames("Family") %>% 
-  select(-X)
-OTU = otu_table(as.matrix(fido_18s_merged_raw), taxa_are_rows = TRUE)
-TAX = tax_table(as.matrix(zhan_taxa))
-meta=sample_data(env_metadata_phy)
-
-#USe proportions
-phy_18s=phyloseq_transform_to_long((phyloseq(OTU, TAX, meta))) %>% 
-  mutate(Family=asv_code)
-phy_18s %>%
-  filter(max_size==0.5) %>% 
-  phyloseq_long_treemap_top(., Family, Class ,"",10,colors=NULL, label_group1 = TRUE)->s1_18s
-phy_18s %>%
-  filter(max_size==1.0) %>% 
-  phyloseq_long_treemap_top(., Family, Class ,"",10,colors=NULL, label_group1 = TRUE)->s2_18s
-phy_18s %>%
-  filter(max_size==2) %>% 
-  phyloseq_long_treemap_top(., Family, Class ,"",10,colors=NULL, label_group1 = TRUE)->s3_18s
-
-fido_18s_tree=grid.arrange(s1_18s,s2_18s,s3_18s,nrow=1)
-
-ggsave(
-  filename = here("plots/treemaps/fido_18s_treemap.png"),
-  plot = fido_18s_tree,
-  width = 20,  # Width in inches
-  height = 9  # Height in inches
-)
-
-ggsave(
-  filename = here("plots/treemaps/fido_18s_treemap.pdf"),
-  plot = fido_18s_tree,
-  width = 20,  # Width in inches
-  height = 9  # Height in inches
-)
-
-
 
 # COI ---------------------------------------------------------------------
 
@@ -1628,6 +1551,88 @@ ggsave(
 
 
 
+# 18S ---------------------------------------------------------------------
+
+
+
+#Predicted proportions
+fido_s1_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s1_ecdf_family_phy_all_subpools.csv")) %>% 
+  select(-starts_with("X")) %>% 
+  pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
+  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
+  group_by(Sample_ID_short, Family) %>%
+  summarise(n_reads = sum(n_reads)) %>%
+  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
+  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
+
+
+fido_s2_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s2_ecdf_family_phy_all_subpools.csv")) %>% 
+  select(-starts_with("X")) %>% 
+  pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
+  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
+  group_by(Sample_ID_short, Family) %>%
+  summarise(n_reads = sum(n_reads)) %>%
+  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
+  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
+
+
+fido_s3_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s3_ecdf_family_phy_all_subpools.csv")) %>% 
+  select(-starts_with("X")) %>% 
+  pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
+  mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
+  group_by(Sample_ID_short, Family) %>%
+  summarise(n_reads = sum(n_reads)) %>%
+  filter(!grepl("All", Sample_ID_short)) %>% # Filter rows where Sample_ID_short doesn't contain "All"
+  pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
+
+
+merge(fido_s1_raw, fido_s2_raw, by = "Family", all = TRUE) %>%
+  merge(.,fido_s3_raw, by = "Family", all = TRUE)%>%
+  column_to_rownames("Family") %>%
+  mutate(across(.cols = everything(), .fns = ~ coalesce(., 0)))-> fido_18s_merged_raw
+
+#Metadata
+env_metadata_phy=zhan_meta 
+
+#Make phyloseq objects
+
+#Load taxa
+zhan_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18s/fido_18s_family_tax_table.csv")) %>% 
+  column_to_rownames("Family") %>% 
+  select(-X)
+OTU = otu_table(as.matrix(fido_18s_merged_raw), taxa_are_rows = TRUE)
+TAX = tax_table(as.matrix(zhan_taxa))
+meta=sample_data(env_metadata_phy)
+
+#USe proportions
+phy_18s=phyloseq_transform_to_long((phyloseq(OTU, TAX, meta))) %>% 
+  mutate(Family=asv_code)
+phy_18s %>%
+  filter(max_size==0.5) %>% 
+  phyloseq_long_treemap_top(., Family, Class ,"",10,colors=NULL, label_group1 = TRUE)->s1_18s
+phy_18s %>%
+  filter(max_size==1.0) %>% 
+  phyloseq_long_treemap_top(., Family, Class ,"",10,colors=NULL, label_group1 = TRUE)->s2_18s
+phy_18s %>%
+  filter(max_size==2) %>% 
+  phyloseq_long_treemap_top(., Family, Class ,"",10,colors=NULL, label_group1 = TRUE)->s3_18s
+
+fido_18s_tree=grid.arrange(s1_18s,s2_18s,s3_18s,nrow=1)
+
+ggsave(
+  filename = here("plots/treemaps/fido_18s_treemap.png"),
+  plot = fido_18s_tree,
+  width = 20,  # Width in inches
+  height = 9  # Height in inches
+)
+
+ggsave(
+  filename = here("plots/treemaps/fido_18s_treemap.pdf"),
+  plot = fido_18s_tree,
+  width = 20,  # Width in inches
+  height = 9  # Height in inches
+)
+
 
 
 
@@ -1689,16 +1694,12 @@ contrast_palette <-  c("#1f77b4", "#ff7f0e", "#2ca02c", "#9edae5" , "#9467bd", "
 palette_named <- setNames(contrast_palette, orders_coi)
 
 
+#Plot all
 Phy_glom_coi %>%
   group_by(Order) %>%
-  filter((Order %in% c("Calanoida","Euphausiacea"))) %>%
-  # filter(prop < 0.001)  %>%
-  # bind_rows(.,low_prop_families) %>%
-  # filter(prop > 0.01 | Family=="Other") %>% # Create a new data frame with 'other' category
   ggplot(.,aes(x = as.factor(PC1), y = prop, fill = Order)) +
   geom_bar(stat = "identity") +
   labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = "Proportion of Total Reads", fill = "Order") +
-  # ggtitle("Raw Relative Read Abundances By Cycle and Family") +
   theme_minimal() +  # Set axis labels
   theme(axis.title.x = element_text(size = 16),
         axis.title.y = element_text(size = 16),  # Increase x-axis label size
@@ -1706,18 +1707,16 @@ Phy_glom_coi %>%
         axis.text.y = element_text(size = 16))+
   theme(legend.text = element_text(size = 16))+
   scale_fill_manual(values = palette_named) +
-  scale_x_discrete(labels = labels_for_PC1$Sample_ID_short)-> majority_p 
+  scale_x_discrete(labels = labels_for_PC1$Sample_ID_short)-> all_p 
 
 
 
-majority_p
+all_p
 
+#Minority plot
 Phy_glom_coi %>%
   group_by(Order) %>%
   filter(!(Order %in% c("Calanoida","Euphausiacea"))) %>%
-  # filter(prop < 0.001)  %>%
-  # bind_rows(.,low_prop_families) %>%
-  # filter(prop > 0.01 | Family=="Other") %>% # Create a new data frame with 'other' category
   ggplot(.,aes(x = as.factor(PC1), y = asin(sqrt((prop))), fill = Order)) +
   geom_bar(stat = "identity") +
   labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = "Arcsine-Squareroot\nProportion of Residual Reads", fill = "Order") +
@@ -1731,7 +1730,7 @@ Phy_glom_coi %>%
   scale_fill_manual(values = palette_named) +
   scale_x_discrete(labels = labels_for_PC1$Sample_ID_short) -> minority_p 
 minority_p
-stacked_bar_coi=gridExtra::grid.arrange(majority_p,minority_p,ncol=1)
+stacked_bar_coi=gridExtra::grid.arrange(all_p,minority_p,ncol=1)
 
 
 #PNG & PDF Save
@@ -1753,10 +1752,18 @@ ggsave(
 
 
 # 18S ---------------------------------------------------------------------
+zhan_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
+  column_to_rownames("Hash") %>%
+  select(where(~ !is.na(.[[1]])))
+zhan_taxa=read.csv(here("Zoop_Patterns/data/taxa_files/blast_metazoo_18s.csv")) %>% column_to_rownames("Hash")
 
+OTU = otu_table(as.matrix(zhan_otu), taxa_are_rows = TRUE)
+TAX = tax_table(as.matrix(zhan_taxa))
+meta=sample_data(meta_treemap)
+Phy_18s_treemap=phyloseq(OTU,TAX,meta)
 
 Phy_glom_18s <- Phy_18s_treemap %>%
-  tax_glom(taxrank="Family") %>%
+  tax_glom(taxrank="Order") %>%
   phyloseq_transform_to_long(.) %>%
   group_by(as.factor(PC1)) %>%
   mutate(prop = n_reads / sum(n_reads),
@@ -1773,8 +1780,8 @@ Phy_glom_18s_minority <- Phy_18s_treemap %>%
 
 
 # Match categories and get colors for overlapping categories
-orders_coi=as.list(unique(Phy_glom_coi$Order))
-orders_18s=as.list(unique(Phy_glom_18s$Order))
+orders_coi=(unique(Phy_glom_coi$Order))
+orders_18s=(unique(Phy_glom_18s$Order))
 
 matching_categories <- intersect(orders_coi,orders_18s)
 matching_colors <- palette_named [match(matching_categories, orders_coi)]
@@ -1815,10 +1822,6 @@ labels_for_PC1=Phy_glom_18s %>%
 
 Phy_glom_18s %>%
   group_by(Order) %>%
-  # filter(Order %in% c("Calanoida","Euphausiacea")) %>%
-  # filter(prop < 0.001)  %>%
-  # bind_rows(.,low_prop_families) %>%
-  # filter(prop > 0.01 | Family=="Other") %>% # Create a new data frame with 'other' category
   ggplot(.,aes(x = as.factor(PC1), y = prop, fill = Order)) +
   geom_bar(stat = "identity") +
   labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = "Arcsine-Squareroot\nProportion of Residual Reads", fill = "Order") +
@@ -1830,21 +1833,17 @@ Phy_glom_18s %>%
         axis.text.y = element_text(size = 16))+
   theme(legend.text = element_text(size = 16))+
   scale_fill_manual(values = palette_18s) +
-  scale_x_discrete(labels = labels_for_PC1$Sample_ID_short)-> majority_p 
+  scale_x_discrete(labels = labels_for_PC1$Sample_ID_short)-> all_p 
 
 
-majority_p
+all_p
 
 Phy_glom_18s %>%
   group_by(Order) %>%
   filter(!(Order %in% c("Calanoida","Euphausiacea"))) %>%
-  # filter(prop < 0.001)  %>%
-  # bind_rows(.,low_prop_families) %>%
-  # filter(prop > 0.01 | Family=="Other") %>% # Create a new data frame with 'other' category
   ggplot(.,aes(x = as.factor(PC1), y = asin(sqrt(prop)), fill = Order)) +
   geom_bar(stat = "identity") +
   labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = "Proportion of Residual Reads", fill = "Order") +
-  # ggtitle("Raw Relative Read Abundances By Cycle and Family") +
   theme_minimal() +  # Set axis labels
   theme(axis.title.x = element_text(size = 16),
         axis.title.y = element_text(size = 16),  # Increase x-axis label size
@@ -1854,7 +1853,7 @@ Phy_glom_18s %>%
   scale_fill_manual(values = palette_18s) +
   scale_x_discrete(labels = labels_for_PC1$Sample_ID_short) -> minority_p 
 minority_p
-stacked_bar_18s=gridExtra::grid.arrange(majority_p,minority_p,ncol=1)
+stacked_bar_18s=gridExtra::grid.arrange(all_p,minority_p,ncol=1)
 
 
 #PNG & PDF Save
