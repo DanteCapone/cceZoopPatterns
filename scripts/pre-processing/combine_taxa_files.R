@@ -1,10 +1,11 @@
 #Script to combine the blast and metazoogene taxa files 
-
+#Project path
+project_path="Zoop_Patterns"
 
 # 18s ---------------------------------------------------------------------
 
 #Taxa Tables 
-taxa_18s_meta=read.csv(here("data/past/metazoopruned18s_tax.csv"))%>%
+taxa_18s_meta=read.csv(here(project_path,"data/phyloseq_bio_data/18S/metazoopruned18s_tax.csv"))%>%
   mutate(non_na_count = rowSums(!is.na(select(., -Hash)))) %>%
   group_by(Hash) %>%
   filter(rank(desc(non_na_count)) == 1) %>%
@@ -12,7 +13,7 @@ taxa_18s_meta=read.csv(here("data/past/metazoopruned18s_tax.csv"))%>%
   ungroup() 
 
 #BlAST
-taxa_18s_blast=read.csv(here("data/raw_data/BLAST_taxa_class/zhang_taxa.csv")) %>%
+taxa_18s_blast=read.csv(here(project_path,"data/raw_data/BLAST_taxa_class/zhang_taxa.csv")) %>%
   distinct(Hash, .keep_all = TRUE)
 
 
@@ -66,14 +67,14 @@ final_taxa_18s <- final_taxa %>%
 print(final_taxa_18s)
 
 
-write.csv(final_taxa_18s,here("data/taxa_files/blast_metazoo_18s.csv"))
+write.csv(final_taxa_18s,here(project_path,"data/taxa_files/blast_metazoo_18s.csv"))
 
 
 
 # COI ---------------------------------------------------------------------
 
 #Taxa Tables 
-taxa_coi_meta=read.csv(here("data/past/metazooprunedcoi_tax.csv"))%>%
+taxa_coi_meta=read.csv(here(project_path,"data/phyloseq_bio_data/COI/metazooprunedcoi_tax.csv"))%>%
   mutate(non_na_count = rowSums(!is.na(select(., -Hash)))) %>%
   group_by(Hash) %>%
   filter(rank(desc(non_na_count)) == 1) %>%
@@ -81,7 +82,7 @@ taxa_coi_meta=read.csv(here("data/past/metazooprunedcoi_tax.csv"))%>%
   ungroup() 
 
 #BlAST
-taxa_coi_blast=read.csv(here("data/raw_data/BLAST_taxa_class/leray_taxa.csv")) %>%
+taxa_coi_blast=read.csv(here(project_path,"data/raw_data/BLAST_taxa_class/leray_taxa.csv")) %>%
   distinct(Hash, .keep_all = TRUE)
 
 
@@ -135,4 +136,4 @@ final_taxa_coi <- final_taxa %>%
 print(final_taxa_coi)
 
 
-write.csv(final_taxa_coi,here("data/taxa_files/blast_metazoo_coi.csv"))
+write.csv(final_taxa_coi,here(project_path,"data/taxa_files/blast_metazoo_coi.csv"))
