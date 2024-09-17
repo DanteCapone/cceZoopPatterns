@@ -30,12 +30,12 @@ source("Zoop_Patterns/scripts/helpful_functions/general_helper_functions.R")
 
 
 
-#Load the data
+
+# #Load the data ----------------------------------------------------------
 
 #Metadata
 #1) load in metadata and select desired rows 
 env_metadata_raw<-read.csv(here("Zoop_patterns/data/pre_processing/metadata03-28-2023.csv")) 
-names(env_metadata)
 
 #Part one: Read in the physical environmental data
 
@@ -55,19 +55,19 @@ env_metadata<-read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_
 coi_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
-coi_metazoo_meta=env_metadata 
+coi_meta=env_metadata 
 
-coi_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_tax.csv")) %>% column_to_rownames("Hash")
+coi_taxa=read.csv(here("Zoop_Patterns/data/taxa_files/blast_metazoo_coi.csv")) %>% column_to_rownames("Hash")
 
 
 #Merge by site
-coi_metazoo_meta_all=coi_metazoo_meta %>% group_by(Sample_ID_short) %>%
+coi_meta_all=coi_meta %>% group_by(Sample_ID_short) %>%
   summarize_all(median) %>% 
   column_to_rownames("Sample_ID_short")
 
 OTU = otu_table(as.matrix(coi_otu), taxa_are_rows = TRUE)
 TAX = tax_table(as.matrix(coi_taxa))
-meta=sample_data(coi_metazoo_meta)
+meta=sample_data(coi_meta)
 meta$cycle=meta$cycle %>% as.factor()
 Phy_coi_raw <- phyloseq(OTU, TAX, meta)
 
@@ -84,7 +84,7 @@ zhan_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
 zhan_meta=env_metadata
-zhan_metazoo_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_tax.csv")) %>% column_to_rownames("Hash")
+zhan_taxa=read.csv(here("Zoop_Patterns/data/taxa_files/blast_metazoo_18s.csv")) %>% column_to_rownames("Hash")
 
 
 #Merge by site
@@ -93,7 +93,7 @@ zhan_meta_all=zhan_meta %>% group_by(Sample_ID_short) %>%
   column_to_rownames("Sample_ID_short")
 
 OTU = otu_table(as.matrix(zhan_otu), taxa_are_rows = TRUE)
-TAX = tax_table(as.matrix(zhan_metazoo_taxa))
+TAX = tax_table(as.matrix(zhan_taxa))
 meta=sample_data(zhan_meta)
 meta$cycle=meta$cycle %>% as.factor()
 Phy_zhan_raw <- phyloseq(OTU, TAX, meta)
@@ -112,17 +112,15 @@ Phy_merged_zhan_raw=phyloseq(otu_table(Phy_merged_zhan_raw),tax_table(Phy_merged
 
 
 
-# Main Analysis
-###########################################
-###########################################
+# Main Analysis ###########################################
 
 
 ######### Q1 Physical Analysis: #Script for Map, EDA visualization, PCA, and clustering -------------------
 
-#1) Code for SS Chlorophyll Map
 
-#Load colors
-my_palette=custom_pallete_all()
+# #1) Code for SS Chlorophyll Map -----------------------------------------
+
+
 
 
 # Set color palette (similar to the color range in your image)
@@ -218,6 +216,10 @@ chl_map=ggplot() +
 
 
 # Adding station points, add day night as the shape
+
+#Load colors
+my_palette=custom_pallete_all()
+
 chl_map_p2107=chl_map+
   new_scale_fill() +
   geom_point(data = env_metadata, aes(x = Longitude, y = Latitude, shape = day_night, fill = Sample_ID_short), size = 10) +
@@ -249,11 +251,14 @@ ggsave(
 
 
 
-# #3) Counting taxa in each level -----------------------------------------
+# Counting taxa in each level -----------------------------------------
 
 
 
-###18S
+
+# 18S ---------------------------------------------------------------------
+
+
 #Read in the OTU data
 #Run 1 (Non pooled data)
 asv18s_run1=read.csv(here(project_path,"data/raw_reads/","ASV_table_18s_run1.csv")) %>%
@@ -261,17 +266,6 @@ asv18s_run1=read.csv(here(project_path,"data/raw_reads/","ASV_table_18s_run1.csv
 #Run2
 asv18s_run2=read.csv(here(project_path,"data/raw_reads/","ASV_table_18s_run2.csv")) %>%
   select(-X)
-
-
-
-# #Taxa Tables 
-# taxa_18s=read.csv(here("data/past/metazoopruned18s_tax.csv"))%>%
-#   mutate(non_na_count = rowSums(!is.na(select(., -Hash)))) %>%
-#   group_by(Hash) %>%
-#   filter(rank(desc(non_na_count)) == 1) %>%
-#   select(-non_na_count) %>%
-#   ungroup() %>%
-#   column_to_rownames("Hash")
 
 #BlAST
 taxa_18s=read.csv(here(project_path,"data/raw_data/BLAST_taxa_class/zhang_taxa.csv")) %>% 
@@ -484,7 +478,7 @@ metadata_impute <- imputePCA(env_metadata_sel,ncp=1)
 estim_ncpPCA(env_metadata_phy_sel)
 metadata_impute <- imputePCA(env_metadata_phy_sel,ncp=1)
 
-env_metadata_phy_add_back =env_metadata %>%
+env_metadata_phy_add_back =env_metadata_raw %>%
   filter(max_size==0.5)
 metadata_impute_df_phy=metadata_impute$completeObs %>% data.frame() %>% 
   #Add back in categoraical vars
@@ -492,7 +486,7 @@ metadata_impute_df_phy=metadata_impute$completeObs %>% data.frame() %>%
   mutate(max_size=env_metadata_phy_add_back$max_size) %>%
   mutate(cycle=env_metadata_phy_add_back$cycle) %>%
   mutate(Sample_ID_short=env_metadata_phy_add_back$Sample_ID_short) %>%
-  mutate(Sample_ID_dot=env_metadata_phy_add_back$Sample_ID_dot)   # column_to_rownames("Sample_ID_short")
+  mutate(Sample_ID_dot=env_metadata_phy_add_back$Sample_ID_dot)   
 
 
 
@@ -508,17 +502,18 @@ metadata_impute_df_phy=metadata_impute$completeObs %>% data.frame() %>%
 # Correlation plot --------------------------------------------------------
 
 here()
-env_metadata=read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
+env_metadata_corr=read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
   dplyr::select(-c("X"))  %>% 
   column_to_rownames("Sample_ID_dot") %>%
-  select(-c(Sizefractionmm,offshore_onshore,clust_group,PC1,cycle, max_size))
+  select(-c(Sizefractionmm,offshore_onshore,clust_group,PC1,cycle, max_size))%>% 
+  dplyr::select(-Sample_ID_short)
 
 ##Env Correlation matrix
-meta_corr=env_metadata %>% dplyr::select(-Sample_ID_short) %>%
+corr_res=env_metadata_corr %>% 
   cor(.)
 
 # Compute p-values using correlation matrix
-p_values <- cor.mtest(meta_data_phy %>% dplyr::select(-Sample_ID_short))$p %>%
+p_values <- cor.mtest(env_metadata_corr)$p %>%
   as.data.frame() %>%
   rownames_to_column("variable") %>%
   pivot_longer(cols = -variable, names_to = "variable2", values_to = "p.value")%>%
@@ -539,12 +534,12 @@ p_vals_adj=p_values %>%
 # Corr using corrplot --------------------------------------------------------------------
 dev.off()
 # Sort the row names and column names to ensure alignment
-meta_corr <- meta_corr[order(rownames(meta_corr)), order(colnames(meta_corr))]
+corr_res <- corr_res[order(rownames(corr_res)), order(colnames(corr_res))]
 p_vals_adj <- p_vals_adj[order(rownames(p_vals_adj)), order(colnames(p_vals_adj))]
 
 
 #Make correlation plot: blue is positive red is negative
-corr_plot=corrplot(meta_corr,p.mat=p_vals_adj, type = 'lower', order = 'FPC', tl.col = 'black',
+corr_plot=corrplot(corr_res,p.mat=p_vals_adj, type = 'lower', order = 'FPC', tl.col = 'black',
                    cl.ratio = 0.2, tl.srt = 45)
 corr_plot
 
@@ -591,12 +586,12 @@ fviz_eig(env_pca, addlabels = TRUE)
 
 var<-get_pca_var(env_pca)
 pc1_p<-fviz_contrib(env_pca,"var",axes = 1) # default angle=45?
-plot(a,main = "Variables percentage contribution of PC1")
+plot(pc1_p,main = "Variables percentage contribution of PC1")
 
 
 var<-get_pca_var(env_pca)
 pc2_p<-fviz_contrib(env_pca,"var",axes = 2) # default angle=45?
-plot(a,main = "Variables percentage contribution of PC2")
+plot(pc2_p,main = "Variables percentage contribution of PC2")
 grid.arrange(pc1_p,pc2_p)
 
 
@@ -614,8 +609,7 @@ fviz_pca_var(env_pca, col.var = "cos2",
     panel.grid.major=element_blank(),
     panel.grid.minor=element_blank(),
     plot.background=element_blank())
-#Without loadings
-autoplot(env_pca, data=metadata_impute_df_phy,size=3, labels="Sample_ID_dot")+theme_classic()
+
 
 ## Ellipses
 
@@ -630,37 +624,43 @@ plot1
 library(pvclust)
 set.seed(123)
 env_pca_df=env_pca$x %>% as.data.frame()
-# env_pca_df=pca_in
-res.pv <- pvclust(t(env_pca_df), method.dist="cor",method.hclust="average", nboot = 1000)
-# seplot(res.pv, identify=TRUE)
+
+
+#Determine the Optimal cluster #
+# Silhouette method
+fviz_nbclust(pca_in, kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method") 
+#Result: 2 clusters is optimal
+
+#hierarchical clustering 
+res.pv <- pvclust(t(env_pca_df), method.dist="cor",method.hclust="average", nboot = 10000)
 
 #Plot and save figures
-here()
-pdf(here("figures/physiical_clusters_2_2024/pca_cluster_2_28_2024.pdf"),
-    width = 16,  # Width in inches
-    height = 12)  # Height in inches
 plot(res.pv, hang = -1, cex = 1.2,xlab="Sample ID", main="Environmental PCA Clusterings \n with p-values (%)")
 pvrect(res.pv, alpha = 0.95, lwd=2)
-dev.off()
 
-#PNG
-png(here("figures/physiical_clusters_2_2024/pca_cluster_2_28_2024.png"),
-    width = 1600,  # Width in pixels
-    height = 1200,  # Height in pixels
-    res = 300)  # Resolution in dots per inch (dpi)
-plot(res.pv, hang = -1, cex = 1,xlab="Sample ID", main="Environmental PCA Clusterings \n with p-values (%)")
-pvrect(res.pv, alpha = 0.95, lwd=2)
-dev.off()
+#PNG & PDF Save
+ggsave(
+  filename = here("plots/Q1_physical_analysis/pca_clusters.png"),
+  plot = corr_plot,
+  width = 16,  # Width in inches
+  height = 12  # Height in inches
+)
+
+ggsave(
+  filename = here("plots/Q1_physical_analysis/pca_clusters.pdf"),
+  plot = corr_plot,
+  width = 16,  # Width in inches
+  height = 12  # Height in inches
+)
+
 
 
 
 
 res.pv.phys=res.pv %>% as.data.frame(.)
 
-#Determine the Optimal cluster #
-# Silhouette method
-fviz_nbclust(pca_in, kmeans, method = "silhouette")+
-  labs(subtitle = "Silhouette method")
+
 
 
 #Add Clusters to metadata
@@ -681,34 +681,19 @@ metadata_impute_df_phy$offshore_onshore[metadata_impute_df_phy$clust_group==1]="
 
 
 #Add PC1 to the metadata file
-env_pca_df =env_pca_df%>% rownames_to_column("Sample_ID_short")
-row.names(pc1)
-
-metadata_impute_df_phy=left_join(metadata_impute_df_phy, env_pca_df, by="Sample_ID_short") %>% 
-  dplyr::select(-tail(names(.), 16))
+metadata_impute_df_phy=left_join(metadata_impute_df_phy, env_pca_df %>% 
+                                   select(Sample_ID_short,PC1), by="Sample_ID_short")
 
 
 
 
 
 
-# Q2: Diversity Patterns --------------------------------------------------------------------
-#PCA Script
-
-
-
-
+# Q2: Diversity Patterns Shannon vs. PC1 --------------------------------------------------------------------
 
 #Load in the phyloseq data and format to a table
 
-#COI raw reads
-coi_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
-  column_to_rownames("Hash") %>%
-  select(where(~ !is.na(.[[1]])))
 coi_metazoo_meta=env_metadata 
-
-coi_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_tax.csv")) %>% column_to_rownames("Hash")
-
 
 #Merge by site
 coi_metazoo_meta_all=coi_metazoo_meta %>% group_by(Sample_ID_short) %>%
@@ -730,12 +715,7 @@ Phy_merged_coi_raw <- merge_samples(Phy_coi_raw,c("Sample_ID_short"))
 Phy_merged_coi_raw=phyloseq(otu_table(Phy_merged_coi_raw),tax_table(Phy_merged_coi_raw),sample_data(coi_metazoo_meta_all))
 
 #18s
-zhan_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
-  column_to_rownames("Hash") %>%
-  select(where(~ !is.na(.[[1]])))
 zhan_meta=env_metadata
-zhan_metazoo_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_tax.csv")) %>% column_to_rownames("Hash")
-
 
 #Merge by site
 zhan_meta_all=zhan_meta %>% group_by(Sample_ID_short) %>%
@@ -743,7 +723,7 @@ zhan_meta_all=zhan_meta %>% group_by(Sample_ID_short) %>%
   column_to_rownames("Sample_ID_short")
 
 OTU = otu_table(as.matrix(zhan_otu), taxa_are_rows = TRUE)
-TAX = tax_table(as.matrix(zhan_metazoo_taxa))
+TAX = tax_table(as.matrix(zhan_taxa))
 meta=sample_data(zhan_meta)
 meta$cycle=meta$cycle %>% as.factor()
 Phy_zhan_raw <- phyloseq(OTU, TAX, meta)
@@ -815,17 +795,22 @@ summary(lm_model_coi)
 ## Create a scatter plot with regression line, confidence intervals, and color by 'cycle'
 #My colors for Cycles
 txt_sz=24
-my_palette=custom_pallete()
+my_palette=custom_pallete_all()
 coi_plot=ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
-  geom_point(size=8, aes(shape=cycle, fill=cycle))+
-  scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
-  geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
+  geom_point(size=8, aes(, shape = day_night, fill = Sample_ID_short))+
+  scale_shape_manual(values = c("day" = 21, "night"=23), name= "Day/Night") +
+  guides(fill = guide_legend(override.aes = list(shape = 21), ncol = 2)) +  # Set fill legend to 2 columns
+  theme(legend.title = element_text(face = "bold"))+  # Make sure legend titles are styled consistently  geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
   coord_cartesian(ylim = c(1.5, 4), xlim = c(min(plot_data_18s$PC1), 7))+
   scale_x_continuous(breaks = seq(-6, 7, by = 2))+
-  scale_fill_manual(values = my_palette) +
-  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI",
-       shape="Cycle", fill="Cycle") +
-  scale_color_discrete(name = "Cycle") +  # Adjust color legend label
+  geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+        axis.text.y = element_text(size = 12),
+        axis.title = element_text(size = txt_sz),
+        strip.text = element_text(size = txt_sz))+
+  # scale_y_continuous(breaks = seq(0, 4, length.out = 10))+
+  scale_fill_manual(values = my_palette, name="Station ID")+
+  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="COI") +
   stat_cor(method="pearson", label.x = 0, label.y = 3.5, size=8)+
   # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.7)+
   theme_classic()+
@@ -852,22 +837,23 @@ if (saving==1) {
   ) }
 
 #18s all
+my_palette=custom_pallete_all()
 zhan_plot=ggplot(plot_data_18s, aes(x = PC1, y = Shannon)) +
-  geom_point(size=8, aes(shape=cycle, fill=cycle))+
-  scale_shape_manual(values = c("1" = 21, "2" = 22, "3"=24, "T1"=23, "T2"=25)) +
-  geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
+  geom_point(size=8, aes(shape = day_night, fill = Sample_ID_short))+
+  scale_shape_manual(values = c("day" = 21, "night"=23), name= "Day/Night") +
+  guides(fill = guide_legend(override.aes = list(shape = 21), ncol = 2)) +  # Set fill legend to 2 columns
+  theme(legend.title = element_text(face = "bold"))+  # Make sure legend titles are styled consistently  geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
   coord_cartesian(ylim = c(0, 4), xlim = c(min(plot_data_18s$PC1), 7))+
   scale_x_continuous(breaks = seq(-6, 7, by = 2))+
-  scale_fill_manual(values = my_palette) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", formula = y ~ x) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
         axis.text.y = element_text(size = 12),
         axis.title = element_text(size = txt_sz),
         strip.text = element_text(size = txt_sz))+
   # scale_y_continuous(breaks = seq(0, 4, length.out = 10))+
-  scale_fill_manual(values = my_palette) +
+  scale_fill_manual(values = my_palette, name="Station ID")+
   labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="18S",
        shape="Cycle", fill="Cycle") +
-  scale_color_discrete(name = "Cycle") +  # Adjust color legend label
   stat_cor(method="pearson", label.x = 0, label.y = 3.5, size=8)+
   # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), label.x = 4, label.y = 3.7)+
   theme_classic()+
@@ -982,8 +968,9 @@ plot_data_coi <- plot_data_coi %>%
 
 # Updated ggplot code
 coi_plot_sized = ggplot(plot_data_coi, aes(x = PC1, y = Shannon)) +
-  geom_point(size = 6, aes(shape = factor(day_night), fill = factor(cycle)), show.legend = TRUE) +  # Updated aesthetics for shape and fill
-  scale_shape_manual(values = c("day" = 21, "night" = 22)) +  # Assign shapes for day and night
+  geom_point(size=8, aes(, shape = day_night, fill = Sample_ID_short))+
+  scale_shape_manual(values = c("day" = 21, "night"=23), name= "Day/Night") +
+  guides(fill = guide_legend(override.aes = list(shape = 21), ncol = 2)) +  # Set fill legend to 2 columns
   scale_fill_manual(values = my_palette) +  # Ensure colors are assigned from the palette
   geom_smooth(method = "lm", se = TRUE, formula = y ~ x, aes(color = max_size), show.legend = FALSE, alpha = 0.5) +  # Do not show the color legend for the line
   coord_cartesian(ylim = c(0, 5), xlim = c(min(plot_data_coi$PC1), max(plot_data_coi$PC1))) +
@@ -1044,26 +1031,24 @@ print(facet_correlation)
 
 #Plot to visualize
 zhan_plot_sized <- ggplot(plot_data_18s, aes(x = PC1, y = Shannon)) +
-  geom_point(size = 6, aes(shape = cycle, fill = cycle), show.legend = TRUE) +
-  scale_shape_manual(values = c("1" = 21, "2" = 22, "3" = 24, "T1" = 23, "T2" = 25)) +
-  geom_smooth(method = "lm", se = TRUE, formula = y ~ x, aes(color = max_size), show.legend = FALSE, alpha = 0.5) +
-  coord_cartesian(ylim = c(0, 4), xlim = c(min(plot_data_18s$PC1), max(plot_data_18s$PC1)+1)) +
-  scale_x_continuous(breaks = seq(-6, max(plot_data_18s$PC1)+1, by = 1.5)) +
-  scale_y_continuous(breaks = seq(0, 4, by = 1)) +
-  scale_fill_manual(values = my_palette) +
-  labs(x = "Offfshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title="18S") +
-  # scale_color_discrete(name = "Cycle") +  # Adjust color legend label
-  stat_cor(method="pearson", label.x = 4, label.y = 3.5,
-           size=8)+
-  theme_classic()+
-  facet_wrap(~max_size, nrow = 3, labeller = labeller(max_size = c("0.5" = "0.2-0.5 mm", "1" = "0.5-1 mm", "2" = "1-2 mm"))) + 
-  # Altering font sizes
+  geom_point(size=8, aes(, shape = day_night, fill = Sample_ID_short))+
+  scale_shape_manual(values = c("day" = 21, "night"=23), name= "Day/Night") +
+  guides(fill = guide_legend(override.aes = list(shape = 21), ncol = 2)) +  # Set fill legend to 2 columns
+  scale_fill_manual(values = my_palette) +  # Ensure colors are assigned from the palette
+  geom_smooth(method = "lm", se = TRUE, formula = y ~ x, aes(color = max_size), show.legend = FALSE, alpha = 0.5) +  # Do not show the color legend for the line
+  coord_cartesian(ylim = c(0, 5), xlim = c(min(plot_data_coi$PC1), max(plot_data_coi$PC1))) +
+  scale_x_continuous(breaks = seq(-6, max(plot_data_coi$PC1), by = 1.5)) +
+  scale_y_continuous(breaks = seq(0, 6, by = 1)) +
+  labs(x = "Offshore \u2190 PC1 \u2192 Onshore", y = expression(italic("H'")), title = "COI") +
+  stat_cor(method = "pearson", label.x = 2, label.y = 4, size = 8) +
+  theme_classic() +
+  facet_wrap(~max_size, nrow = 3, labeller = labeller(max_size = c("0.5" = "0.2-0.5 mm", "1" = "0.5-1 mm", "2" = "1-2 mm"))) +
   theme(strip.text = element_text(size = txt_sz),
         axis.text.x = element_text(size = txt_sz),
         axis.text.y = element_text(size = txt_sz),
         axis.title.x = element_text(size = txt_sz),
         axis.title.y = element_text(size = txt_sz)) +
-  guides(color = "none") 
+  guides(shape = guide_legend(title = "Day/Night"), fill = guide_legend(title = "Cycle"))  # Only show the legend for points
 zhan_plot_sized
 
 saving=1
@@ -1107,37 +1092,33 @@ if (saving==1) {
 
 
 
-# Q3: ---------------------------------------------------------------------
-
-#Script for Question 3: Community Composition Using Treemaps for RRA
+# Q3: Community Composition Using Treemaps: COI, 18S for majority, minority taxa, onshore and offshore ---------------------------------------------------------------------
 
 
 
-#COI for phyloseq
-leray_metazoo_otucoi=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
-  column_to_rownames("Hash")%>%
-  select(where(~ !is.na(.[[1]])))
+# COI ---------------------------------------------------------------------
 
-leray_metazoo_meta=read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv"))%>%
+
+#Need metadata with offshore_cluster
+meta_treemap=read.csv(here(project_path,"data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
+  dplyr::select(-c("X")) %>%
   column_to_rownames("Sample_ID_dot") %>%
-  dplyr::select(-X)
-leray_metazoo_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/coi_taxa_table_eDNA_metazoogene.csv")) %>% column_to_rownames("X")
+  select(-c(Sizefractionmm,clust_group,PC1,cycle, max_size)) %>%
+  sample_data(.)
 
 
-#Convert to phyloseq
-
-OTU = otu_table(as.matrix(leray_metazoo_otucoi), taxa_are_rows = TRUE)
-TAX = tax_table(as.matrix(leray_metazoo_taxa))
-meta=sample_data(leray_metazoo_meta)
-Phy_merged_coi <- phyloseq(OTU, TAX, meta)
+OTU = otu_table(as.matrix(coi_otu), taxa_are_rows = TRUE)
+TAX = tax_table(as.matrix(coi_taxa))
+meta=sample_data(meta_treemap)
+Phy_coi_treemap=phyloseq(OTU,TAX,meta)
 
 #### Transform to Long
-phy_merged_long_coi=phyloseq_transform_to_long((Phy_merged_coi)) %>%
+phy_merged_long_coi=phyloseq_transform_to_long((Phy_coi_treemap)) %>%
   filter(Genus != "Genus")%>%
   filter(Species != "Species") 
 
 #### Transform to Long
-phy_coi_majority=phyloseq_transform_to_long((Phy_merged_coi)) %>%
+phy_coi_majority=phyloseq_transform_to_long((Phy_coi_treemap)) %>%
   filter(Genus != "Genus")%>%
   filter(Species != "Species")%>%
   mutate(Species = ifelse(Species == "", NA, Species))%>%
@@ -1145,7 +1126,7 @@ phy_coi_majority=phyloseq_transform_to_long((Phy_merged_coi)) %>%
   mutate(Family = ifelse(Family == "", NA, Family)) %>%
   filter((Order %in% c("Calanoida","Euphausiacea")))
 
-phy_coi_minority=phyloseq_transform_to_long((Phy_merged_coi)) %>%
+phy_coi_minority=phyloseq_transform_to_long((Phy_coi_treemap)) %>%
   filter(Genus != "Genus")%>%
   filter(Species != "Species")%>%
   mutate(Species = ifelse(Species == "", NA, Species))%>%
@@ -1304,41 +1285,25 @@ ggsave(
 
 # 18s ---------------------------------------------------------------------
 
-
-####### 18S
-
-#18s reads
-zhan_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
-  column_to_rownames("Hash")%>%
-  select(where(~ !is.na(.[[1]])))
-
-zhan_meta=read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv"))%>%
-  column_to_rownames("Sample_ID_dot") %>%
-  dplyr::select(-X)
-zhan_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18s/metazoopruned18s_tax.csv")) %>% column_to_rownames("Hash") %>%
-  mutate(Family = if_else(is.na(Family), Order, Family)) %>%
-  mutate(Family = if_else(Family=="", Order, Family))
-
-
-#Convert to phyloseq
-
+#Need metadata with offshore_cluster
 OTU = otu_table(as.matrix(zhan_otu), taxa_are_rows = TRUE)
 TAX = tax_table(as.matrix(zhan_taxa))
-meta=sample_data(zhan_meta)
-Phy_merged_18s <- phyloseq(OTU, TAX, meta)
+meta=sample_data(meta_treemap)
+Phy_18s_treemap=phyloseq(OTU,TAX,meta)
 
 #### Transform to Long
-phy_18s_majority=phyloseq_transform_to_long((Phy_merged_18s)) %>%
+phy_18s_majority=phyloseq_transform_to_long((Phy_18s_treemap)) %>%
   mutate(Genus = ifelse(is.na(Genus), "unknown Genus", Genus)) %>%
   mutate(Genus = ifelse(Genus == "", "unknown Genus", Genus))%>%
   mutate(Family = ifelse(is.na(Family), "unknown Family", Family)) %>%
   filter((Order %in% c("Calanoida","Euphausiacea"))) 
 
 
-phy_18s_minority=phyloseq_transform_to_long((Phy_merged_18s)) %>%
+phy_18s_minority=phyloseq_transform_to_long((Phy_18s_treemap)) %>%
   filter(Genus != "Genus")%>%
   filter(Species != "Species")%>%
   mutate(Species = ifelse(Species == "", "NA", Species))%>%
+  mutate(Genus = ifelse(Genus == "", NA, Genus)) %>%
   mutate(Genus = ifelse(is.na(Genus), "unknown Genus", Genus)) %>%
   mutate(Family = ifelse(Family == "", NA, Family)) %>%
   filter(!(Order %in% c("Calanoida","Euphausiacea")))
@@ -1447,7 +1412,7 @@ titles=c("Onshore","Offshore")
 
 for (i in 1:length(off_on)){
   phy_sel=phy_18s_majority[phy_18s_majority$offshore_onshore==off_on[i],]
-  list.plots[[i]]=phyloseq_long_treemap_top(phy_sel,Genus,Family,titles[i],colors=NULL,top=10, label_group1 = TRUE)
+  list.plots[[i]]=phyloseq_long_treemap_top(phy_sel,Species,Genus,titles[i],colors=NULL,top=10, label_group1 = TRUE)
   rm(phy_sel)
 }
 
@@ -1541,8 +1506,6 @@ env_metadata_phy=zhan_meta
 zhan_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18s/fido_18s_family_tax_table.csv")) %>% 
   column_to_rownames("Family") %>% 
   select(-X)
-
-
 OTU = otu_table(as.matrix(fido_18s_merged_raw), taxa_are_rows = TRUE)
 TAX = tax_table(as.matrix(zhan_taxa))
 meta=sample_data(env_metadata_phy)
@@ -1632,19 +1595,19 @@ merge(fido_s1_raw, fido_s2_raw, by = "Genus", all = TRUE) %>%
 # OTU = otu_table(as.matrix(coi_otu), taxa_are_rows = TRUE)
 OTU = otu_table(as.matrix(fido_coi_merged_raw), taxa_are_rows = TRUE)
 TAX = tax_table(as.matrix(coi_taxa))
-meta=sample_data(env_metadata_phy)
+meta=sample_data(coi_meta)
 
 #USe proportions
 phy_coi=phyloseq_transform_to_long((phyloseq(OTU, TAX, meta))) %>% 
   mutate(Genus=asv_code)
 phy_coi %>%
-  filter(max_size==0.2) %>% 
+  filter(max_size==0.5) %>% 
   phyloseq_long_treemap_top(., Genus, Family ,"",10,colors=NULL, label_group1 = TRUE)->s1_coi
 phy_coi %>%
-  filter(max_size==0.5) %>% 
+  filter(max_size==1) %>% 
   phyloseq_long_treemap_top(., Genus, Family ,"",10,colors=NULL, label_group1 = TRUE)->s2_coi
 phy_coi %>%
-  filter(max_size==1) %>% 
+  filter(max_size==2) %>% 
   phyloseq_long_treemap_top(., Genus, Family ,"",10,colors=NULL, label_group1 = TRUE)->s3_coi
 
 fido_coi_tree=grid.arrange(s1_coi,s2_coi,s3_coi,nrow=1)
@@ -1792,14 +1755,14 @@ ggsave(
 # 18S ---------------------------------------------------------------------
 
 
-Phy_glom_18s <- Phy_merged_18s %>%
+Phy_glom_18s <- Phy_18s_treemap %>%
   tax_glom(taxrank="Family") %>%
   phyloseq_transform_to_long(.) %>%
   group_by(as.factor(PC1)) %>%
   mutate(prop = n_reads / sum(n_reads),
          total_reads=sum(prop))
 
-Phy_glom_18s_minority <- Phy_merged_18s %>%
+Phy_glom_18s_minority <- Phy_18s_treemap %>%
   tax_glom(taxrank="Order") %>%
   phyloseq_transform_to_long(.) %>%
   filter(!(Order %in% c("Calanoida","Euphausiacea"))) %>%
