@@ -16,7 +16,8 @@ library(corrplot)
 
 #Set working directory
 here()
-env_metadata<-read.csv(here("data/pre_processing/metadata03-28-2023.csv")) 
+project_path="Zoop_Patterns/"
+env_metadata<-read.csv(here(project_path,"data/pre_processing/metadata03-28-2023.csv")) 
 names(env_metadata)
 
 
