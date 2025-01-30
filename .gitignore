@@ -2,6 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+PCR_bias_correction\drafts\
+
 
 # Ignore all .fasta files
 *.fasta
