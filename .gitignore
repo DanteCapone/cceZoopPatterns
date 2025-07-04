@@ -3,7 +3,11 @@
 .RData
 .Ruserdata
 PCR_bias_correction\drafts\
-
+PCR_bias_correction\figures
+PCR_bias_correction\misc\
+PCR_bias_correction\presentations\
+PCR_bias_correction\tables\
+PCR_bias_correction\archived\
 
 # Ignore all .fasta files
 *.fasta
