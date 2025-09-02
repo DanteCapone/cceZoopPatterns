@@ -3,13 +3,13 @@
 .RData
 .Ruserdata
 PCR_bias_correction\drafts\
-PCR_bias_correction\figures
+PCR_bias_correction\figures\
 PCR_bias_correction\misc\
 PCR_bias_correction\presentations\
 PCR_bias_correction\tables\
 PCR_bias_correction\archived\
-PCR_bias_correction\scripts\Q4_taxa_environment_patterns
-PCR_bias_correction\scripts\Q5_methods_comparison
+PCR_bias_correction\scripts\Q4_taxa_environment_patterns\
+PCR_bias_correction\scripts\Q5_methods_comparison\
 
 # Ignore all .fasta files
 *.fasta
