@@ -1,0 +1,28 @@
+Package: cceZoopPatterns
+Title: Zooplankton Metabarcoding Patterns in the California Current Ecosystem
+Version: 0.1.0
+Authors@R: c(
+    person(given = "Dante", family = "Capone", role = c("aut", "cre"), email = "", comment = c(ORCID = ""))
+)
+Description: Analysis code and minimal inputs for environmental and spatial patterns of zooplankton communities using eDNA metabarcoding (18S, COI) in the California Current Ecosystem, including size-fraction analyses and comparisons with Zooscan.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 4.1)
+Imports:
+    here,
+    tidyverse,
+    phyloseq,
+    fido,
+    microbiome,
+    ggplot2,
+    gridExtra,
+    ggdist,
+    vegan,
+    patchwork,
+    stringr,
+    readr
+Suggests:
+    devtools,
+    roxygen2
+Roxygen: list(markdown = TRUE)
