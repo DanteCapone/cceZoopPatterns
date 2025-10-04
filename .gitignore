@@ -37,3 +37,11 @@ scripts/Q*/
 # OS/editor noise
 .DS_Store
 Thumbs.db
+
+# Exclude heavy taxonomy assignment refs
+scripts/pre-processing/taxanomic_assignation/
+# Common heavy formats in that folder
+scripts/pre-processing/taxanomic_assignation/*.fasta
+scripts/pre-processing/taxanomic_assignation/*.qza
+scripts/pre-processing/taxanomic_assignation/*.tsv
+scripts/pre-processing/taxanomic_assignation/*.txt
