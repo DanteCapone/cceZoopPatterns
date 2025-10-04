@@ -1,0 +1,39 @@
+# R / RStudio
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# renv local libraries
+renv/library/
+renv/staging/
+
+# Build artifacts
+*.Rcheck/
+
+# Data policy
+# Raw/private data excluded
+data/raw/
+data/private/
+
+# Raw sequencing and heavy bio formats (excluded)
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.fasta
+*.fa
+*.bam
+*.sam
+*.bai
+
+# Draft documents and figures (excluded by request)
+drafts/
+figures/
+
+# Exclude analysis folders starting with Q under scripts/
+scripts/Q*/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
