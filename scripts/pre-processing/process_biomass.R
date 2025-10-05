@@ -1,4 +1,4 @@
-#Add depth
+﻿#Add depth
 depths=read.csv(here("PCR_bias_correction/data/physical_environmental_data/sample_depths.csv")) %>%
   select(-X) %>%
   mutate(Sample_ID_short=Sample_ID)
@@ -18,4 +18,4 @@ dryweights=read.csv("PCR_bias_correction/data/raw_data/biomass/dryweights_forzoo
   mutate(biomass_mg_m2=biomass_dry/Volume_Filtered_m3*210) %>%
   select(-Sample_ID) 
 
-write.csv(dryweights,here("Zoop_Patterns/data/zoop_other/biomass_processed.csv"))
+write.csv(dryweights,here("data/zoop_other/biomass_processed.csv"))

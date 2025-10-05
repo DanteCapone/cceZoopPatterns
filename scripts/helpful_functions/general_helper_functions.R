@@ -1,4 +1,4 @@
-# General helper functions
+﻿# General helper functions
 library(dplyr)
 library(grDevices)
 

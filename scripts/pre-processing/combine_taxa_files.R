@@ -1,6 +1,6 @@
-#Script to combine the blast and metazoogene taxa files 
+﻿#Script to combine the blast and metazoogene taxa files 
 #Project path
-project_path="Zoop_Patterns"
+project_path="."
 
 # 18s ---------------------------------------------------------------------
 

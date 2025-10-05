@@ -1,4 +1,4 @@
-# Load necessary libraries
+﻿# Load necessary libraries
 library(tidyverse)
 library(phyloseq)
 library(randomForest)
@@ -6,7 +6,7 @@ library(caret)
 library(here)
 
 #Dryweights
-biomass=read.csv(here("Zoop_Patterns/data/zoop_other/biomass_processed.csv")) %>% 
+biomass=read.csv(here("data/zoop_other/biomass_processed.csv")) %>% 
   select(c(Sample_ID_short, max_size, biomass_mg_m2))
 
 # COI ---------------------------------------------------------------------
@@ -14,18 +14,18 @@ biomass=read.csv(here("Zoop_Patterns/data/zoop_other/biomass_processed.csv")) %>
 
 
 # Standardize OTU row names in leray_metazoo_otucoi and taxa_data
-leray_metazoo_otucoi <- read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
+leray_metazoo_otucoi <- read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
 rownames(leray_metazoo_otucoi) <- paste0("otu_", gsub(" ", ".", rownames(leray_metazoo_otucoi)))
 
 # Standardize taxa table row names
-leray_metazoo_taxa <- read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/coi_taxa_table_eDNA_metazoogene.csv")) %>%
+leray_metazoo_taxa <- read.csv(here("data/phyloseq_bio_data/COI/coi_taxa_table_eDNA_metazoogene.csv")) %>%
   column_to_rownames("X")
 rownames(leray_metazoo_taxa) <- paste0("otu_", gsub(" ", ".", rownames(leray_metazoo_taxa)))
 
 # Standardize metadata row names
-leray_metazoo_meta <- read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>% 
+leray_metazoo_meta <- read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>% 
   left_join(.,biomass, by = c("Sample_ID_short","max_size"))%>%
   column_to_rownames("Sample_ID_dot") %>%
   dplyr::select(-X) )
@@ -323,15 +323,15 @@ ggsave(
 ####### 18S
 
 #18s reads
-zhan_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
+zhan_otu=read.csv(here("data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
   column_to_rownames("Hash")%>%
   select(where(~ !is.na(.[[1]])))
 rownames(zhan_otu) <- paste0("otu_", gsub(" ", ".", rownames(zhan_otu)))
 
-zhan_meta=read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv"))%>%
+zhan_meta=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv"))%>%
   column_to_rownames("Sample_ID_dot") %>%
   dplyr::select(-X)
-zhan_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18s/metazoopruned18s_tax.csv")) %>% column_to_rownames("Hash") %>%
+zhan_taxa=read.csv(here("data/phyloseq_bio_data/18s/metazoopruned18s_tax.csv")) %>% column_to_rownames("Hash") %>%
   mutate(Family = if_else(is.na(Family), Order, Family)) %>%
   mutate(Family = if_else(Family=="", Order, Family))
 rownames(zhan_taxa) <- paste0("otu_", gsub(" ", ".", rownames(zhan_taxa)))

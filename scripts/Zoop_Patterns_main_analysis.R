@@ -1,4 +1,4 @@
-# Zooplankton CCE Barcoding Paper 1 Analysis Script
+﻿# Zooplankton CCE Barcoding Paper 1 Analysis Script
 
 ########### Load the libraries
 library(tidyverse)
@@ -21,12 +21,12 @@ library(rerddap)
 library(RColorBrewer)
 
 #Project path
-project_path="Zoop_Patterns"
+project_path="."
 
 ########## Load the helper scripts
-source(("Zoop_Patterns/scripts/helpful_functions/treemap_funs_Capone.R"))
-source("Zoop_Patterns/scripts/helpful_functions/phyloseq_mapping_funs.R")
-source("Zoop_Patterns/scripts/helpful_functions/general_helper_functions.R")
+source(here("scripts/helpful_functions/treemap_funs_Capone.R"))
+source(here("scripts/helpful_functions/phyloseq_mapping_funs.R")
+source(here("scripts/helpful_functions/general_helper_functions.R")
 
 
 
@@ -35,11 +35,11 @@ source("Zoop_Patterns/scripts/helpful_functions/general_helper_functions.R")
 
 #Metadata
 #1) load in metadata and select desired rows 
-env_metadata_raw<-read.csv(here("Zoop_patterns/data/pre_processing/metadata03-28-2023.csv")) 
+env_metadata_raw<-read.csv(here("data/pre_processing/metadata03-28-2023.csv")) 
 
 #Part one: Read in the physical environmental data
 
-env_metadata<-read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.2.2023_for_map.csv")) %>% dplyr::select(-c("X"))%>%
+env_metadata<-read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.2.2023_for_map.csv")) %>% dplyr::select(-c("X"))%>%
   column_to_rownames("Sample_ID_dot") %>%
   mutate(PC1=PC1*-1) %>% 
   #Add day night for plotting
@@ -52,12 +52,12 @@ env_metadata<-read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_
 #Load in the phyloseq data and format to a table
 
 #COI raw reads
-coi_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
+coi_otu=read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
 coi_meta=env_metadata 
 
-coi_taxa=read.csv(here("Zoop_Patterns/data/taxa_files/blast_metazoo_coi.csv")) %>% column_to_rownames("Hash")
+coi_taxa=read.csv(here("data/taxa_files/blast_metazoo_coi.csv")) %>% column_to_rownames("Hash")
 
 
 #Merge by site
@@ -80,10 +80,10 @@ Phy_merged_coi_raw <- merge_samples(Phy_coi_raw,c("Sample_ID_short"))
 Phy_merged_coi_raw=phyloseq(otu_table(Phy_merged_coi_raw),tax_table(Phy_merged_coi_raw),sample_data(coi_metazoo_meta_all))
 
 #18s
-zhan_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
+zhan_otu=read.csv(here("data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
-zhan_taxa=read.csv(here("Zoop_Patterns/data/taxa_files/blast_metazoo_18s.csv")) %>% column_to_rownames("Hash")
+zhan_taxa=read.csv(here("data/taxa_files/blast_metazoo_18s.csv")) %>% column_to_rownames("Hash")
 zhan_meta=env_metadata
 
 
@@ -502,7 +502,7 @@ metadata_impute_df_phy=metadata_impute$completeObs %>% data.frame() %>%
 # Correlation plot --------------------------------------------------------
 
 here()
-env_metadata_corr=read.csv(here("Zoop_Patterns/data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
+env_metadata_corr=read.csv(here("data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
   dplyr::select(-c("X"))  %>% 
   column_to_rownames("Sample_ID_dot") %>%
   select(-c(Sizefractionmm,offshore_onshore,clust_group,PC1,cycle, max_size))%>% 
@@ -1098,10 +1098,10 @@ if (saving==1) {
 
 # COI ---------------------------------------------------------------------
 
-coi_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
+coi_otu=read.csv(here("data/phyloseq_bio_data/COI/metazooprunedcoi_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
-coi_taxa=read.csv(here("Zoop_Patterns/data/taxa_files/blast_metazoo_coi.csv")) %>% column_to_rownames("Hash")
+coi_taxa=read.csv(here("data/taxa_files/blast_metazoo_coi.csv")) %>% column_to_rownames("Hash")
 
 #Need metadata with offshore_cluster
 meta_treemap=read.csv(here(project_path,"data/physical_environmental_data/env_metadata_impute_phyloseq_6.9.2023.csv")) %>%
@@ -1467,7 +1467,7 @@ ggsave(
 # COI ---------------------------------------------------------------------
 
 #Taxa
-coi_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/fido_coi_genus_tax_table.csv")) %>%
+coi_taxa=read.csv(here("data/phyloseq_bio_data/COI/fido_coi_genus_tax_table.csv")) %>%
   mutate(Genus = ifelse(Genus == "Genus", Family, Genus)) %>%
   column_to_rownames("Genus") %>% 
   mutate(Hash=X) %>%
@@ -1476,7 +1476,7 @@ coi_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/COI/fido_coi_genus_
 
 
 #Predicted proportions
-fido_s1_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_coi_s1_ecdf_taxa_phy.csv")) %>% 
+fido_s1_raw=read.csv(here("data/fido/phy/fido_coi_s1_ecdf_taxa_phy.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Genus, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -1486,7 +1486,7 @@ fido_s1_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_coi_s1_ecdf_taxa_phy
   pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
 
 
-fido_s2_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_coi_s2_ecdf_taxa_phy.csv")) %>% 
+fido_s2_raw=read.csv(here("data/fido/phy/fido_coi_s2_ecdf_taxa_phy.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Genus, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -1496,7 +1496,7 @@ fido_s2_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_coi_s2_ecdf_taxa_phy
   pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
 
 
-fido_s3_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_coi_s3_ecdf_taxa_phy.csv")) %>% 
+fido_s3_raw=read.csv(here("data/fido/phy/fido_coi_s3_ecdf_taxa_phy.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Genus, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -1556,7 +1556,7 @@ ggsave(
 
 
 #Predicted proportions
-fido_s1_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s1_ecdf_family_phy_all_subpools.csv")) %>% 
+fido_s1_raw=read.csv(here("data/fido/phy/fido_18s_s1_ecdf_family_phy_all_subpools.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -1566,7 +1566,7 @@ fido_s1_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s1_ecdf_family_p
   pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
 
 
-fido_s2_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s2_ecdf_family_phy_all_subpools.csv")) %>% 
+fido_s2_raw=read.csv(here("data/fido/phy/fido_18s_s2_ecdf_family_phy_all_subpools.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -1576,7 +1576,7 @@ fido_s2_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s2_ecdf_family_p
   pivot_wider(names_from = Sample_ID_short, values_from = n_reads, values_fill = 0)
 
 
-fido_s3_raw=read.csv(here("Zoop_Patterns/data/fido/phy/fido_18s_s3_ecdf_family_phy_all_subpools.csv")) %>% 
+fido_s3_raw=read.csv(here("data/fido/phy/fido_18s_s3_ecdf_family_phy_all_subpools.csv")) %>% 
   select(-starts_with("X")) %>% 
   pivot_longer(cols = -Family, names_to = "Sample_ID", values_to = "n_reads") %>%
   mutate(Sample_ID_short= str_extract(Sample_ID, ".*(?=\\.[^.]+$)")) %>%
@@ -1597,7 +1597,7 @@ env_metadata_phy=zhan_meta
 #Make phyloseq objects
 
 #Load taxa
-zhan_taxa=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18s/fido_18s_family_tax_table.csv")) %>% 
+zhan_taxa=read.csv(here("data/phyloseq_bio_data/18s/fido_18s_family_tax_table.csv")) %>% 
   column_to_rownames("Family") %>% 
   select(-X)
 OTU = otu_table(as.matrix(fido_18s_merged_raw), taxa_are_rows = TRUE)
@@ -1752,10 +1752,10 @@ ggsave(
 
 
 # 18S ---------------------------------------------------------------------
-zhan_otu=read.csv(here("Zoop_Patterns/data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
+zhan_otu=read.csv(here("data/phyloseq_bio_data/18S/metazoopruned18s_otu.csv")) %>%
   column_to_rownames("Hash") %>%
   select(where(~ !is.na(.[[1]])))
-zhan_taxa=read.csv(here("Zoop_Patterns/data/taxa_files/blast_metazoo_18s.csv")) %>% column_to_rownames("Hash")
+zhan_taxa=read.csv(here("data/taxa_files/blast_metazoo_18s.csv")) %>% column_to_rownames("Hash")
 
 OTU = otu_table(as.matrix(zhan_otu), taxa_are_rows = TRUE)
 TAX = tax_table(as.matrix(zhan_taxa))
