@@ -1,21 +1,47 @@
+# R / RStudio
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
-PCR_bias_correction\drafts\
-PCR_bias_correction\figures\
-PCR_bias_correction\misc\
-PCR_bias_correction\presentations\
-PCR_bias_correction\tables\
-PCR_bias_correction\archived\
-PCR_bias_correction\scripts\Q4_taxa_environment_patterns\
-PCR_bias_correction\scripts\Q5_methods_comparison\
 
-# Ignore all .fasta files
+# renv local libraries
+renv/library/
+renv/staging/
+
+# Build artifacts
+*.Rcheck/
+
+# Data policy
+# Raw/private data excluded
+data/raw/
+data/private/
+
+# Raw sequencing and heavy bio formats (excluded)
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
 *.fasta
+*.fa
+*.bam
+*.sam
+*.bai
 
-# Ignore all .tsv files
-*.tsv
+# Draft documents and figures (excluded by request)
+drafts/
+figures/
 
-# Ignore everything inside the Analysis/ folder
-Analysis/
+# Exclude analysis folders starting with Q under scripts/
+scripts/Q*/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Exclude heavy taxonomy assignment refs
+scripts/pre-processing/taxanomic_assignation/
+# Common heavy formats in that folder
+scripts/pre-processing/taxanomic_assignation/*.fasta
+scripts/pre-processing/taxanomic_assignation/*.qza
+scripts/pre-processing/taxanomic_assignation/*.tsv
+scripts/pre-processing/taxanomic_assignation/*.txt
