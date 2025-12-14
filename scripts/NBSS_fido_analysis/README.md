@@ -1,6 +1,6 @@
 # NBSS + FIDO analysis (Zooscan + metabarcoding)
 
-This folder contains a self-contained analysis that relates **Zooscan Normalized Biomass Size Spectrum (NBSS) slope** to **eDNA community composition**, using **FIDO** (multinomial logistic-normal / pibble models) on a curated set of **top SIMPER taxa**.
+This folder contains a self-contained analysis that relates **Zooscan Normalized Biomass Size Spectrum (NBSS) slope** to **Metabarcoding community composition**, using **FIDO** (multinomial logistic-normal / pibble models) on a curated set of **top SIMPER taxa**.
 
 ## What this analysis does
 
@@ -24,8 +24,8 @@ This folder contains a self-contained analysis that relates **Zooscan Normalized
 
 - **Outputs**
   - Posterior summaries (CSV):
-    - `outputs/fido/fido_nbss_coi_posterior_summary.csv`
-    - `outputs/fido/fido_nbss_18s_posterior_summary.csv`
+    - `outputs/fido_nbss_coi_posterior_summary.csv`
+    - `outputs/fido_nbss_18s_posterior_summary.csv`
   - Figures (PDF/PNG) saved to `figures/`.
 
 ## Folder structure
